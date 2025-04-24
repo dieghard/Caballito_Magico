@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Caballo Mágico</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/addons/p5.sound.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: black;
+      }
+      #reiniciarBtn {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 18px;
+        font-size: 16px;
+        background: #ffffff88;
+        border: 2px solid #ffffff;
+        border-radius: 8px;
+        color: #000;
+        cursor: pointer;
+        z-index: 10;
+        transition: all 0.3s ease;
+      }
+      #reiniciarBtn:hover {
+        background: #ffffffcc;
+        transform: scale(1.05);
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      let caballoSprite;
+      let sonidoAparecer;
+      let sonidoDesaparecer;
+      let input,
+        word = "Diego";
+      let caballo;
+      let restartTimer = null;
+      let letrasMostradas = false;
+      let ocultarLetras = false;
+      let temporizador = 0;
+      let cols = 4,
+        rows = 8,
+        fw = 128,
+        fh = 128;
+      let particles = [],
+        fondoNiebla = [],
+        estelas = [];
+      let letrasObj = []; // Objetos para animar cada letra
+      let hueOffset = 0;
+      let mouseInteractivo = false;
+
+      function preload() {
+        caballoSprite = loadImage("caballito.png");
+        sonidoAparecer = loadSound("aparecer.mp3");
+        sonidoDesaparecer = loadSound("desaparecer.mp3");
+      }
+
+      function setup() {
+        createCanvas(windowWidth, windowHeight);
+        colorMode(HSB, 360, 100, 100, 100);
+        textFont("monospace");
+        textSize(120);
+        textAlign(CENTER, CENTER);
+
+        // Ajustar volumen del sonido aparecer (reducido al 40%)
+        sonidoAparecer.setVolume(0.4);
+        sonidoDesaparecer.setVolume(0.7);
+
+        input = createInput(word);
+        input.position(20, 20);
+        input.input(() => {
+          if (input.value().length <= 20) {
+            // Aumentar a 20 caracteres
+            word = input.value();
+            actualizarLetras();
+          } else {
+            input.value(word);
+            alert("Máximo 20 caracteres");
+          }
+        });
+
+        caballo = new Caballo(-fw, height / 2 + 80);
+        for (let i = 0; i < 60; i++) fondoNiebla.push(new Niebla());
+        actualizarLetras();
+      }
+
+      function actualizarLetras() {
+        letrasObj = [];
+        // Calcular espaciado adaptativo según longitud de la palabra
+        let espaciado = word.length > 10 ? 40 : 60;
+
+        for (let i = 0; i < word.length; i++) {
+          letrasObj.push({
+            char: word[i],
+            x: width / 2 - (word.length * espaciado) / 2 + i * espaciado,
+            y: height / 2,
+            size: 0,
+            targetSize: word.length > 10 ? 80 : 120, // Tamaño más pequeño para palabras largas
+            alpha: 0,
+            offsetY: 0,
+            velY: 0,
+            brillo: 0,
+            rotacion: random(-0.05, 0.05), // Rotación más sutil
+          });
+        }
+      }
+
+      function draw() {
+        let fade =
+          ocultarLetras && caballo.pos.x < -fw
+            ? map(frameCount - restartTimer + 180, 0, 60, 0, 255)
+            : 0;
+        background(220, 70, 10, constrain(255 - fade, 0, 255));
+
+        // Efecto de fondo estrellado
+        if (frameCount % 30 === 0) {
+          particles.push(new Estrella(random(width), random(height)));
+        }
+
+        // Renderizar niebla de fondo
+        for (let n of fondoNiebla) {
+          n.update();
+          n.display();
+        }
+
+        // Lógica para el movimiento del caballo y la aparición/desaparición de letras
+        if (
+          !letrasMostradas &&
+          caballo.pos.x > width / 4 &&
+          !sonidoAparecer.isPlaying()
+        ) {
+          sonidoAparecer.play();
+          letrasMostradas = true;
+          ocultarLetras = false;
+          temporizador = frameCount + 180;
+        }
+
+        if (letrasMostradas && frameCount > temporizador && !ocultarLetras) {
+          ocultarLetras = true;
+          caballo.vel.mult(-1);
+          caballo.frame = 0;
+          sonidoDesaparecer.play();
+        }
+
+        if (letrasMostradas && ocultarLetras && caballo.pos.x < -fw) {
+          if (restartTimer === null) {
+            restartTimer = frameCount + 180;
+          }
+
+          // Mensaje final mejorado
+          let mensajeFinal = "Gracias por mirar ✨";
+          let pulso = sin(frameCount * 0.05) * 0.1 + 1;
+
+          // Halo alrededor del mensaje
+          for (let i = 4; i > 0; i--) {
+            fill(frameCount % 360, 80, 100, 40 - i * 8);
+            textSize(48 * pulso + i * 4);
+            text(
+              mensajeFinal,
+              width / 2,
+              height * 0.75 + sin(frameCount * 0.05) * 10
+            );
+          }
+
+          fill(frameCount % 360, 80, 100, sin(frameCount * 0.1) * 40 + 200);
+          textSize(48 * pulso);
+          text(
+            mensajeFinal,
+            width / 2,
+            height * 0.75 + sin(frameCount * 0.05) * 10
+          );
+
+          // Crear partículas en cascada alrededor del mensaje
+          if (frameCount % 3 === 0) {
+            particles.push(
+              new Particula(
+                width / 2 + random(-150, 150),
+                height * 0.75 + random(-30, 20),
+                true
+              )
+            );
+          }
+
+          if (restartTimer !== null && frameCount > restartTimer) {
+            caballo = new Caballo(-fw, height / 2 + 80);
+            letrasMostradas = false;
+            ocultarLetras = false;
+            temporizador = 0;
+            restartTimer = null;
+            actualizarLetras();
+          }
+        }
+
+        // Renderizar estelas (rastro) del caballo
+        for (let i = estelas.length - 1; i >= 0; i--) {
+          estelas[i].update();
+          estelas[i].display();
+          if (estelas[i].alpha <= 0) estelas.splice(i, 1);
+        }
+
+        // Animar y mostrar letras
+        for (let i = 0; i < letrasObj.length; i++) {
+          let letra = letrasObj[i];
+
+          // Interactividad con el mouse
+          let distMouse = dist(mouseX, mouseY, letra.x, letra.y);
+          let mouseEffect = 0;
+
+          if (
+            distMouse < 100 &&
+            mouseInteractivo &&
+            letrasMostradas &&
+            !ocultarLetras
+          ) {
+            mouseEffect = map(distMouse, 0, 100, 20, 0);
+
+            if (frameCount % 5 === 0) {
+              particles.push(
+                new Particula(
+                  letra.x + random(-20, 20),
+                  letra.y + random(-20, 20),
+                  false
+                )
+              );
+            }
+          }
+
+          // Animación de aparición con rebote
+          if (letrasMostradas && !ocultarLetras) {
+            // Objetivo de tamaño creciente con retraso basado en el índice
+            if (frameCount > temporizador - 180 + i * 5) {
+              letra.size = lerp(
+                letra.size,
+                letra.targetSize + mouseEffect,
+                0.1
+              );
+              letra.alpha = lerp(letra.alpha, 100, 0.1);
+
+              // Efecto de rebote
+              letra.velY += (0 - letra.offsetY) * 0.1;
+              letra.velY *= 0.8;
+              letra.offsetY += letra.velY;
+
+              // Pulso de brillo
+              letra.brillo = 20 + 15 * sin(frameCount * 0.1 + i);
+            }
+          } else if (ocultarLetras) {
+            // Animación de desaparición con vuelo hacia arriba
+            letra.size = lerp(letra.size, 0, 0.05);
+            letra.alpha = lerp(letra.alpha, 0, 0.05);
+            letra.offsetY -= 2; // Volar hacia arriba al desaparecer
+          }
+
+          // Dibujar resplandor de la letra
+          if (letra.alpha > 0) {
+            push();
+            translate(letra.x, letra.y + letra.offsetY);
+            rotate(sin(frameCount * 0.02) * letra.rotacion);
+
+            // Efecto de resplandor más elegante (menos psicodélico)
+            // Usar colores más suaves basados en una paleta armónica
+            let baseHue = 200; // Azul base elegante
+
+            // Efecto de resplandor con tonos armónicos
+            for (let r = 30; r > 0; r -= 10) {
+              fill(
+                baseHue + ((i * 5) % 40), // Variación de tono más sutil entre letras
+                70,
+                90,
+                letra.alpha * (r / 30) * 0.4
+              );
+              text(letra.char, 0, 0, letra.size + r);
+            }
+
+            // La letra con un tono más sobrio
+            fill(baseHue + ((i * 5) % 40), 20, 100, letra.alpha);
+            textSize(letra.size);
+            text(letra.char, 0, 0);
+            pop();
+
+            textSize(120); // restaurar tamaño
+          }
+        }
+
+        // Crear efecto de estela tras el caballo
+        if (frameCount % 2 == 0) {
+          estelas.push(new Estela(caballo.pos.x, caballo.pos.y));
+        }
+
+        // Crear partículas desde el caballo
+        for (let i = 0; i < 2; i++) {
+          particles.push(
+            new Particula(
+              caballo.pos.x + random(-10, 10),
+              caballo.pos.y + random(-5, 5),
+              false
+            )
+          );
+        }
+
+        // Actualizar y mostrar caballo
+        caballo.update();
+        caballo.display();
+
+        // Actualizar y mostrar partículas
+        for (let i = particles.length - 1; i >= 0; i--) {
+          particles[i].update();
+          particles[i].display();
+          if (particles[i].alpha <= 0) particles.splice(i, 1);
+        }
+      }
+
+      class Caballo {
+        constructor(x, y) {
+          this.pos = createVector(x, y);
+          this.vel = createVector(3, 0);
+          this.fila = 0;
+          this.frame = 0;
+          this.timer = 0;
+          this.sinOffset = random(100);
+        }
+
+        update() {
+          this.timer++;
+          if (this.timer % 5 === 0) {
+            this.frame = (this.frame + 1) % cols;
+          }
+
+          this.pos.add(this.vel);
+          this.pos.y =
+            height / 2 + 80 + sin(frameCount * 0.05 + this.sinOffset) * 15;
+
+          if (this.pos.x > width + fw) {
+            if (ocultarLetras) {
+              this.pos.x = -fw;
+              this.vel.x = abs(this.vel.x); // Asegurar dirección correcta
+            }
+          }
+          if (this.pos.x < -fw && ocultarLetras === false) {
+            this.pos.x = width + fw;
+            this.vel.x = -abs(this.vel.x); // Asegurar dirección correcta
+          }
+        }
+
+        display() {
+          let sx = this.frame * fw;
+          let sy = this.fila * fh;
+          push();
+          translate(this.pos.x, this.pos.y);
+          imageMode(CENTER);
+          if (this.vel.x < 0) scale(-1, 1);
+
+          // Efecto de balanceo suave
+          rotate(sin(frameCount * 0.1) * 0.05);
+
+          image(caballoSprite, 0, 0, fw, fh, sx, sy, fw, fh);
+          pop();
+        }
+      }
+
+      class Particula {
+        constructor(x, y, especial = false) {
+          this.pos = createVector(x, y);
+          this.vel = createVector(
+            random(-1, 1),
+            random(-2, especial ? -0.5 : -3)
+          );
+          this.alpha = 100;
+          this.size = random(4, especial ? 15 : 10);
+          this.hue = random(360);
+          this.tipo = random(["brillo", "chispa", "polvo"]);
+          this.especial = especial; // Para las partículas del mensaje final
+          this.rotacion = random(TWO_PI);
+          this.rotVel = random(-0.1, 0.1);
+        }
+
+        update() {
+          this.pos.add(this.vel);
+          this.alpha -= this.especial ? 0.8 : 2;
+          this.rotacion += this.rotVel;
+
+          // Gravedad diferente según el tipo
+          if (this.especial) {
+            this.vel.y += 0.03;
+          } else {
+            this.vel.y += 0.05;
+          }
+        }
+
+        display() {
+          noStroke();
+          push();
+          translate(this.pos.x, this.pos.y);
+          rotate(this.rotacion);
+
+          if (this.tipo === "brillo") {
+            fill(this.hue, 80, 100, this.alpha);
+            ellipse(0, 0, this.size);
+          } else if (this.tipo === "chispa") {
+            fill((this.hue + frameCount * 0.5) % 360, 100, 100, this.alpha);
+            star(0, 0, this.size * 0.3, this.size * 0.7, 5);
+          } else {
+            fill((this.hue + 60) % 360, 60, 100, this.alpha);
+            ellipse(0, 0, this.size * 0.6);
+          }
+          pop();
+        }
+      }
+
+      class Estrella {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
+          this.size = random(1, 3);
+          this.alpha = 0;
+          this.maxAlpha = random(50, 100);
+          this.pulseSpeed = random(0.02, 0.05);
+          this.hue = random(180, 260);
+        }
+
+        update() {
+          this.alpha =
+            this.maxAlpha * (0.5 + 0.5 * sin(frameCount * this.pulseSpeed));
+        }
+
+        display() {
+          fill(this.hue, 30, 100, this.alpha);
+          noStroke();
+          ellipse(this.x, this.y, this.size);
+        }
+      }
+
+      // Función para dibujar estrellas (para las chispas)
+      function star(x, y, radius1, radius2, npoints) {
+        let angle = TWO_PI / npoints;
+        let halfAngle = angle / 2.0;
+        beginShape();
+        for (let a = 0; a < TWO_PI; a += angle) {
+          let sx = cos(a) * radius2;
+          let sy = sin(a) * radius2;
+          vertex(sx, sy);
+          sx = cos(a + halfAngle) * radius1;
+          sy = sin(a + halfAngle) * radius1;
+          vertex(sx, sy);
+        }
+        endShape(CLOSE);
+      }
+
+      class Estela {
+        constructor(x, y) {
+          this.pos = createVector(x, y);
+          this.alpha = 80;
+          this.size = random(30, 50);
+          this.hue = (frameCount * 2) % 360;
+        }
+
+        update() {
+          this.alpha -= 1.5;
+          this.size *= 0.97;
+        }
+
+        display() {
+          noStroke();
+          fill(this.hue, 80, 100, this.alpha);
+          ellipse(this.pos.x, this.pos.y, this.size);
+        }
+      }
+
+      class Niebla {
+        constructor() {
+          this.x = random(width);
+          this.y = random(height);
+          this.r = random(80, 200);
+          this.alpha = random(10, 30);
+          this.speed = random(0.1, 0.4);
+          this.hue = random(200, 260); // Tonos azul-violeta
+        }
+
+        update() {
+          this.x += this.speed;
+          if (this.x > width + this.r) {
+            this.x = -this.r;
+            this.y = random(height);
+          }
+        }
+
+        display() {
+          noStroke();
+          fill(this.hue, 30, 60, this.alpha);
+          ellipse(this.x, this.y, this.r);
+        }
+      }
+
+      function mousePressed() {
+        mouseInteractivo = true;
+        // Crear un efecto de explosión de partículas donde se hace clic
+        for (let i = 0; i < 15; i++) {
+          particles.push(new Particula(mouseX, mouseY, true));
+        }
+      }
+
+      function mouseReleased() {
+        mouseInteractivo = false;
+      }
+
+      function windowResized() {
+        resizeCanvas(windowWidth, windowHeight);
+        actualizarLetras(); // Re-calcular posiciones de letras
+      }
+
+      function reiniciar() {
+        caballo = new Caballo(-fw, height / 2 + 80);
+        letrasMostradas = false;
+        ocultarLetras = false;
+        temporizador = 0;
+        restartTimer = null;
+        input.value(word);
+        actualizarLetras();
+      }
+    </script>
+    <button id="reiniciarBtn" onclick="reiniciar()">🔄 Reiniciar</button>
+  </body>
+</html>
