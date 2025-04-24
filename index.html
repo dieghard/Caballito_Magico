@@ -54,6 +54,70 @@
       let hueOffset = 0;
       let mouseInteractivo = false;
 
+      // Nuevas variables para efectos aleatorios
+      let temaActual; // Guarda el tema visual actual
+      let temasVisuales = [
+        {
+          nombre: "fuego",
+          baseHue: 15,
+          satMin: 70,
+          satMax: 100,
+          briMin: 80,
+          briMax: 100,
+        },
+        {
+          nombre: "agua",
+          baseHue: 200,
+          satMin: 60,
+          satMax: 90,
+          briMin: 70,
+          briMax: 90,
+        },
+        {
+          nombre: "naturaleza",
+          baseHue: 120,
+          satMin: 60,
+          satMax: 90,
+          briMin: 60,
+          briMax: 85,
+        },
+        {
+          nombre: "galaxia",
+          baseHue: 270,
+          satMin: 70,
+          satMax: 100,
+          briMin: 70,
+          briMax: 90,
+        },
+        {
+          nombre: "arcoiris",
+          baseHue: 0,
+          satMin: 80,
+          satMax: 100,
+          briMin: 80,
+          briMax: 100,
+        },
+        {
+          nombre: "oro",
+          baseHue: 45,
+          satMin: 70,
+          satMax: 100,
+          briMin: 80,
+          briMax: 100,
+        },
+        {
+          nombre: "neon",
+          baseHue: 320,
+          satMin: 90,
+          satMax: 100,
+          briMin: 90,
+          briMax: 100,
+        },
+      ];
+      let efectoLetras = 0; // Tipo de efecto para las letras (0-5)
+      let efectoCaballo = 0; // Tipo de efecto para el caballo (0-5)
+      let efectoMensaje = 0; // Tipo de efecto para el mensaje final (0-5)
+
       function preload() {
         caballoSprite = loadImage("caballito.png");
         sonidoAparecer = loadSound("aparecer.mp3");
@@ -83,6 +147,15 @@
             alert("Máximo 20 caracteres");
           }
         });
+
+        // Seleccionar tema y efectos aleatorios al inicio
+        temaActual = random(temasVisuales);
+        efectoLetras = floor(random(6));
+        efectoCaballo = floor(random(6));
+        efectoMensaje = floor(random(6));
+        console.log(
+          `Tema inicial: ${temaActual.nombre}, Efecto letras: ${efectoLetras}, Efecto caballo: ${efectoCaballo}, Efecto mensaje: ${efectoMensaje}`
+        );
 
         caballo = new Caballo(-fw, height / 2 + 80);
         for (let i = 0; i < 60; i++) fondoNiebla.push(new Niebla());
@@ -154,28 +227,79 @@
 
           // Mensaje final mejorado
           let mensajeFinal = "Gracias por mirar ✨";
-          let pulso = sin(frameCount * 0.05) * 0.1 + 1;
 
-          // Halo alrededor del mensaje
-          for (let i = 4; i > 0; i--) {
-            fill(frameCount % 360, 80, 100, 40 - i * 8);
-            textSize(48 * pulso + i * 4);
-            text(
-              mensajeFinal,
-              width / 2,
-              height * 0.75 + sin(frameCount * 0.05) * 10
-            );
+          // Aplicar diferentes efectos al mensaje según el tipo seleccionado aleatoriamente
+          push();
+          translate(width / 2, height * 0.75);
+
+          switch (efectoMensaje) {
+            case 0: // Pulso ondulante
+              let pulso = sin(frameCount * 0.05) * 0.1 + 1;
+              scale(pulso);
+              break;
+            case 1: // Rotación suave
+              rotate(sin(frameCount * 0.02) * 0.1);
+              break;
+            case 2: // Ondulación vertical
+              translate(0, sin(frameCount * 0.05) * 15);
+              break;
+            case 3: // Disco de colores
+              // No hay transformación adicional, sólo cambios de color
+              break;
+            case 4: // Zoom y movimiento
+              scale(1 + sin(frameCount * 0.03) * 0.15);
+              translate(
+                sin(frameCount * 0.02) * 10,
+                sin(frameCount * 0.03) * 5
+              );
+              break;
+            case 5: // Letra por letra animada
+              // Este efecto se manejará al dibujar el texto
+              break;
           }
 
-          fill(frameCount % 360, 80, 100, sin(frameCount * 0.1) * 40 + 200);
-          textSize(48 * pulso);
-          text(
-            mensajeFinal,
-            width / 2,
-            height * 0.75 + sin(frameCount * 0.05) * 10
-          );
+          // Usar colores del tema actual
+          let hueMensaje = temaActual.baseHue;
+          if (temaActual.nombre === "arcoiris") {
+            hueMensaje = (frameCount * 0.5) % 360;
+          }
 
-          // Crear partículas en cascada alrededor del mensaje
+          // Halo alrededor del mensaje con colores del tema
+          for (let i = 4; i > 0; i--) {
+            fill(
+              hueMensaje + i * 10,
+              temaActual.satMax,
+              temaActual.briMax,
+              40 - i * 8
+            );
+            textSize(48 + i * 4);
+
+            // Para el efecto 5, animamos letra por letra
+            if (efectoMensaje === 5) {
+              drawAnimatedText(mensajeFinal, 0, 0, frameCount * 0.5);
+            } else {
+              text(mensajeFinal, 0, 0);
+            }
+          }
+
+          // El mensaje final con colores del tema
+          fill(
+            hueMensaje,
+            temaActual.satMax,
+            temaActual.briMax,
+            sin(frameCount * 0.1) * 30 + 70
+          );
+          textSize(48);
+
+          // Para el efecto 5, animamos letra por letra
+          if (efectoMensaje === 5) {
+            drawAnimatedText(mensajeFinal, 0, 0, frameCount * 0.5);
+          } else {
+            text(mensajeFinal, 0, 0);
+          }
+          pop();
+
+          // Crear partículas en cascada alrededor del mensaje según el tema
           if (frameCount % 3 === 0) {
             particles.push(
               new Particula(
@@ -260,25 +384,58 @@
           if (letra.alpha > 0) {
             push();
             translate(letra.x, letra.y + letra.offsetY);
-            rotate(sin(frameCount * 0.02) * letra.rotacion);
 
-            // Efecto de resplandor más elegante (menos psicodélico)
-            // Usar colores más suaves basados en una paleta armónica
-            let baseHue = 200; // Azul base elegante
+            // Aplicar diferentes efectos según el tipo seleccionado aleatoriamente
+            switch (efectoLetras) {
+              case 0: // Rebote y giro
+                rotate(sin(frameCount * 0.02 + i) * letra.rotacion * 2);
+                break;
+              case 1: // Pulso
+                let pulsoLetra = 1 + sin(frameCount * 0.1 + i * 0.5) * 0.15;
+                scale(pulsoLetra);
+                break;
+              case 2: // Vibración
+                translate(random(-2, 2), random(-2, 2));
+                break;
+              case 3: // Ondulación
+                let ondaY = sin(frameCount * 0.05 + i * 0.5) * 5;
+                translate(0, ondaY);
+                break;
+              case 4: // Rotación continua suave
+                rotate(frameCount * 0.01 + i * 0.2);
+                break;
+              case 5: // Efecto zoom in/out
+                let zoom = 1 + sin(frameCount * 0.03 + i * 0.2) * 0.2;
+                scale(zoom, 1);
+                break;
+            }
 
-            // Efecto de resplandor con tonos armónicos
+            // Usar colores del tema actual
+            let hueBase = temaActual.baseHue;
+            // Para el tema arcoiris, hacer que cada letra tenga un color distinto rotativo
+            if (temaActual.nombre === "arcoiris") {
+              hueBase = (hueBase + frameCount * 0.5 + i * 30) % 360;
+            }
+
+            // Efecto de resplandor con tema actual
             for (let r = 30; r > 0; r -= 10) {
+              let hueLetter = hueBase + ((i * 5) % 40); // Variación de tono entre letras
               fill(
-                baseHue + ((i * 5) % 40), // Variación de tono más sutil entre letras
-                70,
-                90,
+                hueLetter,
+                map(r, 30, 0, temaActual.satMax, temaActual.satMin),
+                map(r, 30, 0, temaActual.briMax, temaActual.briMin),
                 letra.alpha * (r / 30) * 0.4
               );
               text(letra.char, 0, 0, letra.size + r);
             }
 
-            // La letra con un tono más sobrio
-            fill(baseHue + ((i * 5) % 40), 20, 100, letra.alpha);
+            // La letra con el color principal del tema
+            fill(
+              hueBase + ((i * 5) % 40),
+              temaActual.satMin,
+              temaActual.briMax,
+              letra.alpha
+            );
             textSize(letra.size);
             text(letra.char, 0, 0);
             pop();
@@ -323,6 +480,8 @@
           this.frame = 0;
           this.timer = 0;
           this.sinOffset = random(100);
+          this.escala = 1;
+          this.rotacion = 0;
         }
 
         update() {
@@ -332,8 +491,51 @@
           }
 
           this.pos.add(this.vel);
-          this.pos.y =
-            height / 2 + 80 + sin(frameCount * 0.05 + this.sinOffset) * 15;
+
+          // Comportamiento base
+          let baseY = height / 2 + 80;
+
+          // Aplicar diferentes comportamientos según el efecto seleccionado aleatoriamente
+          switch (efectoCaballo) {
+            case 0: // Rebote suave
+              this.pos.y = baseY + sin(frameCount * 0.05 + this.sinOffset) * 15;
+              this.escala = 1 + sin(frameCount * 0.08) * 0.05; // Pequeño cambio de tamaño
+              this.rotacion = sin(frameCount * 0.1) * 0.05; // Rotación suave
+              break;
+            case 1: // Galope con saltos
+              let salto = 0;
+              if (frameCount % 30 < 15) {
+                salto = sin(frameCount * 0.2) * 30;
+              }
+              this.pos.y = baseY - salto;
+              this.escala = 1 + (salto > 0 ? 0.1 : 0);
+              this.rotacion = sin(frameCount * 0.2) * 0.1;
+              break;
+            case 2: // Zigzag
+              this.pos.y = baseY + sin(frameCount * 0.2) * 20;
+              this.rotacion = sin(frameCount * 0.2) * 0.15;
+              break;
+            case 3: // Flotante
+              this.pos.y = baseY + sin(frameCount * 0.03) * 25;
+              this.escala = 1 + sin(frameCount * 0.05) * 0.1;
+              this.rotacion = sin(frameCount * 0.03) * 0.08;
+              break;
+            case 4: // Movimiento ondulante
+              this.pos.y =
+                baseY +
+                sin(frameCount * 0.1) * 15 +
+                cos(frameCount * 0.05) * 10;
+              this.rotacion = sin(frameCount * 0.07) * 0.1;
+              break;
+            case 5: // Movimiento frenético
+              this.pos.y =
+                baseY +
+                random(-5, 5) +
+                sin(frameCount * 0.05 + this.sinOffset) * 15;
+              this.escala = 1 + random(-0.03, 0.03);
+              this.rotacion = random(-0.03, 0.03);
+              break;
+          }
 
           if (this.pos.x > width + fw) {
             if (ocultarLetras) {
@@ -353,13 +555,45 @@
           push();
           translate(this.pos.x, this.pos.y);
           imageMode(CENTER);
-          if (this.vel.x < 0) scale(-1, 1);
+          if (this.vel.x < 0) scale(-1 * this.escala, this.escala);
+          else scale(this.escala);
 
-          // Efecto de balanceo suave
-          rotate(sin(frameCount * 0.1) * 0.05);
+          // Aplicar rotación según el efecto
+          rotate(this.rotacion);
+
+          // Aplicar efecto visual según el tema actual
+          // Esto colorea ligeramente la imagen del caballo con el color del tema
+          tint(
+            temaActual.baseHue,
+            temaActual.nombre === "arcoiris"
+              ? 30 + sin(frameCount * 0.1) * 20
+              : 30,
+            100
+          );
 
           image(caballoSprite, 0, 0, fw, fh, sx, sy, fw, fh);
+
+          // Resetear el tint para no afectar otras imágenes
+          noTint();
           pop();
+
+          // Crear partículas temáticas desde el caballo
+          if (frameCount % 3 === 0) {
+            // Usar colores del tema actual para las partículas
+            let huePart = temaActual.baseHue;
+            if (temaActual.nombre === "arcoiris") {
+              huePart = (frameCount * 0.5) % 360;
+            }
+
+            // Emitir partículas según el tema
+            let part = new Particula(
+              this.pos.x + random(-20, 20),
+              this.pos.y + random(-10, 30),
+              false
+            );
+            part.hue = huePart + random(-20, 20);
+            particles.push(part);
+          }
         }
       }
 
@@ -514,6 +748,13 @@
       }
 
       function reiniciar() {
+        // Seleccionar tema y efectos aleatorios
+        temaActual = random(temasVisuales);
+        efectoLetras = floor(random(6));
+        efectoCaballo = floor(random(6));
+        efectoMensaje = floor(random(6));
+
+        // Reiniciar la animación
         caballo = new Caballo(-fw, height / 2 + 80);
         letrasMostradas = false;
         ocultarLetras = false;
@@ -521,6 +762,40 @@
         restartTimer = null;
         input.value(word);
         actualizarLetras();
+
+        // Reiniciar el fondo
+        fondoNiebla = [];
+        for (let i = 0; i < 60; i++) fondoNiebla.push(new Niebla());
+
+        console.log(
+          `Tema aplicado: ${temaActual.nombre}, Efecto letras: ${efectoLetras}, Efecto caballo: ${efectoCaballo}, Efecto mensaje: ${efectoMensaje}`
+        );
+      }
+
+      // Función para animar texto letra por letra
+      function drawAnimatedText(texto, x, y, speed) {
+        let charWidth = textWidth("M") * 0.6; // Aproximación del ancho de una letra
+        let totalWidth = texto.length * charWidth;
+
+        push();
+        translate(x - totalWidth / 2, y);
+
+        for (let i = 0; i < texto.length; i++) {
+          let char = texto.charAt(i);
+          let xPos = i * charWidth;
+
+          // Efecto de animación individual para cada letra
+          let offset = sin(speed + i * 0.3) * 8;
+          let scale = 0.8 + sin(speed * 0.7 + i * 0.5) * 0.2;
+
+          push();
+          translate(xPos, offset);
+          scale(scale);
+          text(char, 0, 0);
+          pop();
+        }
+
+        pop();
       }
     </script>
     <button id="reiniciarBtn" onclick="reiniciar()">🔄 Reiniciar</button>
