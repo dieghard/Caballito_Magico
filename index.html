@@ -19,7 +19,7 @@
 
       /* Contenedor para los botones para evitar superposición */
       .button-container {
-        position: absolute;
+        position: fixed; /* Cambiado a fixed para asegurar que siempre esté visible */
         bottom: 20px;
         right: 20px;
         display: flex;
@@ -46,19 +46,20 @@
         transform: scale(1.05);
       }
 
-      /* Luna con nubes */
+      /* Luna con nubes - reposicionada para no tapar el input */
       .moon-container {
         position: absolute;
         top: 20px;
         right: 20px;
-        width: 180px; /* Aumentado de 150px a 180px */
-        height: 180px; /* Aumentado de 150px a 180px */
+        width: 180px;
+        height: 180px;
         z-index: 5;
         overflow: hidden;
         border-radius: 50%;
-        box-shadow: 0 0 40px 15px rgba(255, 255, 255, 0.7); /* Sombra más pronunciada */
+        box-shadow: 0 0 40px 15px rgba(255, 255, 255, 0.7);
         animation: moonFloat 15s infinite ease-in-out;
         transform-origin: center center;
+        cursor: pointer; /* Indicar que es clickeable */
       }
 
       @keyframes moonFloat {
@@ -117,6 +118,30 @@
         }
       }
 
+      /* Nuevo estilo para el mensaje "Powered by" */
+      .powered-by {
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        font-family: monospace;
+        font-size: 14px;
+        color: white;
+        z-index: 10;
+        text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+        animation: poweredByGlow 4s infinite alternate;
+      }
+
+      @keyframes poweredByGlow {
+        0% {
+          opacity: 0.7;
+          transform: scale(1);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1.05);
+        }
+      }
+
       /* Estilos adaptados para móvil */
       @media (max-width: 768px) {
         .button-container {
@@ -131,10 +156,16 @@
         }
 
         .moon-container {
-          width: 150px; /* Aumentado de 120px a 150px */
-          height: 150px; /* Aumentado de 120px a 150px */
-          top: 10px;
+          width: 150px;
+          height: 150px;
+          top: 80px; /* Movida más abajo para evitar tapar el input */
           right: 10px;
+        }
+
+        .powered-by {
+          font-size: 12px;
+          bottom: 5px;
+          left: 5px;
         }
       }
 
@@ -146,8 +177,9 @@
         }
 
         .moon-container {
-          width: 120px; /* Aumentado de 100px a 120px */
-          height: 120px; /* Aumentado de 100px a 120px */
+          width: 120px;
+          height: 120px;
+          top: 100px; /* Aún más abajo en pantallas pequeñas */
         }
       }
     </style>
@@ -158,6 +190,9 @@
       <img src="Luna.webp" alt="Luna llena" class="moon-img" />
       <div class="clouds"></div>
     </div>
+
+    <!-- Nuevo elemento para el mensaje "Powered by" -->
+    <div id="poweredBy" class="powered-by">Powered by Diego Markiewicz</div>
 
     <script>
       let caballoSprite;
@@ -266,6 +301,26 @@
       let sonidosFirework = [];
       let ultimoSonidoFirework = -1; // Para seguir cuál se reprodujo por última vez
 
+      // Nuevas variables para el mensaje "Powered by"
+      let poweredByEffects = [
+        "normal",
+        "rainbow",
+        "pulse",
+        "flicker",
+        "wave",
+        "rotate",
+      ];
+      let currentPoweredEffect = 0;
+      let poweredByTimer = 0;
+      let poweredByColors = [
+        "#ffffff",
+        "#ffcc00",
+        "#ff88dd",
+        "#88ffcc",
+        "#88aaff",
+        "#ddff88",
+      ];
+
       function preload() {
         caballoSprite = loadImage("caballito.png");
         // Precargar sonidos pero no reproducirlos aún
@@ -331,6 +386,8 @@
 
         // Crear y posicionar el input con tamaño adaptado
         input = createInput(word);
+        // Asegurar que el input esté siempre por encima de la luna
+        input.style("z-index", "20");
         if (isMobile) {
           input.style("font-size", "18px");
           input.style("padding", "12px 15px");
@@ -370,6 +427,9 @@
         // Añadir un temporizador de seguridad para iniciar el ciclo de la animación
         // en caso de que no se dispare correctamente
         setTimeout(initAnimationSafety, 2500);
+
+        // Inicializar temporizador para cambiar el efecto del "Powered by"
+        poweredByTimer = frameCount + 300; // Cambiar cada 5 segundos (300 frames)
       }
 
       // Nueva función de seguridad para iniciar la animación aunque haya problemas con el audio
@@ -552,6 +612,7 @@
           }
         }
 
+        // MODIFICACIÓN AQUÍ: Ajustar la lógica de reinicio para dispositivos móviles
         if (letrasMostradas && ocultarLetras && caballo.pos.x < -fw) {
           // Detener el sonido de cabalgata cuando el caballo sale de la pantalla
           if (audioHabilitado && sonidoCabalgata.isPlaying()) {
@@ -559,12 +620,13 @@
           }
 
           if (restartTimer === null) {
-            restartTimer = frameCount + 120; // Reducido de 180 a 120 para volver más rápido
+            restartTimer = frameCount + (isMobile ? 60 : 120); // Tiempo reducido en móviles
           }
 
           // Mensaje final mejorado
           let mensajeFinal = "Gracias por mirar ✨";
 
+          // MODIFICACIÓN: Forzar siempre que se muestre el mensaje final
           // Aplicar diferentes efectos al mensaje según el tipo seleccionado aleatoriamente
           push();
           // Ajustar posición para Samsung Flip y otros móviles
@@ -578,30 +640,37 @@
 
           translate(width / 2, yPos);
 
-          switch (efectoMensaje) {
-            case 0: // Pulso ondulante
-              let pulso = sin(frameCount * 0.05) * 0.1 + 1;
-              scale(pulso);
-              break;
-            case 1: // Rotación suave
-              rotate(sin(frameCount * 0.02) * 0.1);
-              break;
-            case 2: // Ondulación vertical
-              translate(0, sin(frameCount * 0.05) * 15);
-              break;
-            case 3: // Disco de colores
-              // No hay transformación adicional, sólo cambios de color
-              break;
-            case 4: // Zoom y movimiento
-              scale(1 + sin(frameCount * 0.03) * 0.15);
-              translate(
-                sin(frameCount * 0.02) * 10,
-                sin(frameCount * 0.03) * 5
-              );
-              break;
-            case 5: // Letra por letra animada
-              // Este efecto se manejará al dibujar el texto
-              break;
+          // MODIFICACIÓN: Asegurar que los efectos de mensaje no fallen en móviles
+          try {
+            switch (efectoMensaje) {
+              case 0: // Pulso ondulante
+                let pulso = sin(frameCount * 0.05) * 0.1 + 1;
+                scale(pulso);
+                break;
+              case 1: // Rotación suave
+                rotate(sin(frameCount * 0.02) * 0.1);
+                break;
+              case 2: // Ondulación vertical
+                translate(0, sin(frameCount * 0.05) * 15);
+                break;
+              case 3: // Disco de colores
+                // No hay transformación adicional, sólo cambios de color
+                break;
+              case 4: // Zoom y movimiento
+                scale(1 + sin(frameCount * 0.03) * 0.15);
+                translate(
+                  sin(frameCount * 0.02) * 10,
+                  sin(frameCount * 0.03) * 5
+                );
+                break;
+              case 5: // Letra por letra animada
+                // Este efecto se manejará al dibujar el texto
+                break;
+            }
+          } catch (e) {
+            console.error("Error en efecto de mensaje:", e);
+            // Si falla algún efecto, usar el más simple
+            efectoMensaje = 3;
           }
 
           // Usar colores del tema actual
@@ -622,7 +691,12 @@
 
             // Para el efecto 5, animamos letra por letra
             if (efectoMensaje === 5) {
-              drawAnimatedText(mensajeFinal, 0, 0, frameCount * 0.5);
+              try {
+                drawAnimatedText(mensajeFinal, 0, 0, frameCount * 0.5);
+              } catch (e) {
+                console.error("Error en animación de texto:", e);
+                text(mensajeFinal, 0, 0); // Fallback si la animación falla
+              }
             } else {
               text(mensajeFinal, 0, 0);
             }
@@ -639,14 +713,19 @@
 
           // Para el efecto 5, animamos letra por letra
           if (efectoMensaje === 5) {
-            drawAnimatedText(mensajeFinal, 0, 0, frameCount * 0.5);
+            try {
+              drawAnimatedText(mensajeFinal, 0, 0, frameCount * 0.5);
+            } catch (e) {
+              console.error("Error en animación de texto:", e);
+              text(mensajeFinal, 0, 0); // Fallback si la animación falla
+            }
           } else {
             text(mensajeFinal, 0, 0);
           }
           pop();
 
           // Crear partículas en cascada alrededor del mensaje según el tema
-          if (frameCount % 3 === 0) {
+          if (frameCount % (isMobile ? 5 : 3) === 0) {
             particles.push(
               new Particula(
                 width / 2 + random(-150, 150),
@@ -656,7 +735,9 @@
             );
           }
 
+          // MODIFICACIÓN: Asegurar que el reinicio ocurra correctamente
           if (restartTimer !== null && frameCount > restartTimer) {
+            console.log("Reiniciando ciclo de animación");
             caballo = new Caballo(-fw, height / 2 + 80);
             caballo.vel.x = Math.abs(caballo.vel.x); // Asegurar dirección correcta
             letrasMostradas = false;
@@ -859,6 +940,14 @@
 
         // Actualizar y mostrar efectos de click
         updateClickEffects();
+
+        // Cambiar el efecto del "Powered by" periódicamente
+        if (frameCount > poweredByTimer) {
+          currentPoweredEffect =
+            (currentPoweredEffect + 1) % poweredByEffects.length;
+          poweredByTimer = frameCount + 300; // 5 segundos
+          updatePoweredByEffect();
+        }
       }
 
       class Caballo {
@@ -884,77 +973,120 @@
           // Comportamiento base
           let baseY = height / 2 + 80;
 
-          // Aplicar diferentes comportamientos según el efecto seleccionado aleatoriamente
-          switch (efectoCaballo) {
-            case 0: // Rebote suave
-              this.pos.y = baseY + sin(frameCount * 0.05 + this.sinOffset) * 15;
-              this.escala = 1 + sin(frameCount * 0.08) * 0.05; // Pequeño cambio de tamaño
-              this.rotacion = sin(frameCount * 0.1) * 0.05; // Rotación suave
-              break;
-            case 1: // Galope con saltos
-              let salto = 0;
-              if (frameCount % 30 < 15) {
-                salto = sin(frameCount * 0.2) * 30;
+          // MODIFICACIÓN: Reducir complejidad de los efectos en móviles para mejorar rendimiento
+          try {
+            // Aplicar diferentes comportamientos según el efecto seleccionado aleatoriamente
+            if (isMobile) {
+              // Efectos simplificados para móviles
+              switch (efectoCaballo) {
+                case 0: // Rebote suave simplificado
+                case 3: // Flotante simplificado
+                case 4: // Movimiento ondulante simplificado
+                  this.pos.y = baseY + sin(frameCount * 0.05) * 10;
+                  this.escala = 1;
+                  this.rotacion = 0;
+                  break;
+                case 1: // Galope con saltos simplificado
+                case 2: // Zigzag simplificado
+                  this.pos.y = baseY;
+                  this.escala = 1;
+                  this.rotacion = 0;
+                  break;
+                case 5: // Movimiento frenético simplificado
+                  this.pos.y = baseY + random(-3, 3);
+                  this.escala = 1;
+                  this.rotacion = 0;
+                  break;
               }
-              this.pos.y = baseY - salto;
-              this.escala = 1 + (salto > 0 ? 0.1 : 0);
-              this.rotacion = sin(frameCount * 0.2) * 0.1;
-              break;
-            case 2: // Zigzag
-              this.pos.y = baseY + sin(frameCount * 0.2) * 20;
-              this.rotacion = sin(frameCount * 0.2) * 0.15;
-              break;
-            case 3: // Flotante
-              this.pos.y = baseY + sin(frameCount * 0.03) * 25;
-              this.escala = 1 + sin(frameCount * 0.05) * 0.1;
-              this.rotacion = sin(frameCount * 0.03) * 0.08;
-              break;
-            case 4: // Movimiento ondulante
-              this.pos.y =
-                baseY +
-                sin(frameCount * 0.1) * 15 +
-                cos(frameCount * 0.05) * 10;
-              this.rotacion = sin(frameCount * 0.07) * 0.1;
-              break;
-            case 5: // Movimiento frenético
-              this.pos.y =
-                baseY +
-                random(-5, 5) +
-                sin(frameCount * 0.05 + this.sinOffset) * 15;
-              this.escala = 1 + random(-0.03, 0.03);
-              this.rotacion = random(-0.03, 0.03);
-              break;
+            } else {
+              // Efectos completos para escritorio
+              switch (efectoCaballo) {
+                case 0: // Rebote suave
+                  this.pos.y =
+                    baseY + sin(frameCount * 0.05 + this.sinOffset) * 15;
+                  this.escala = 1 + sin(frameCount * 0.08) * 0.05; // Pequeño cambio de tamaño
+                  this.rotacion = sin(frameCount * 0.1) * 0.05; // Rotación suave
+                  break;
+                case 1: // Galope con saltos
+                  let salto = 0;
+                  if (frameCount % 30 < 15) {
+                    salto = sin(frameCount * 0.2) * 30;
+                  }
+                  this.pos.y = baseY - salto;
+                  this.escala = 1 + (salto > 0 ? 0.1 : 0);
+                  this.rotacion = sin(frameCount * 0.2) * 0.1;
+                  break;
+                case 2: // Zigzag
+                  this.pos.y = baseY + sin(frameCount * 0.2) * 20;
+                  this.rotacion = sin(frameCount * 0.2) * 0.15;
+                  break;
+                case 3: // Flotante
+                  this.pos.y = baseY + sin(frameCount * 0.03) * 25;
+                  this.escala = 1 + sin(frameCount * 0.05) * 0.1;
+                  this.rotacion = sin(frameCount * 0.03) * 0.08;
+                  break;
+                case 4: // Movimiento ondulante
+                  this.pos.y =
+                    baseY +
+                    sin(frameCount * 0.1) * 15 +
+                    cos(frameCount * 0.05) * 10;
+                  this.rotacion = sin(frameCount * 0.07) * 0.1;
+                  break;
+                case 5: // Movimiento frenético
+                  this.pos.y =
+                    baseY +
+                    random(-5, 5) +
+                    sin(frameCount * 0.05 + this.sinOffset) * 15;
+                  this.escala = 1 + random(-0.03, 0.03);
+                  this.rotacion = random(-0.03, 0.03);
+                  break;
+              }
+            }
+          } catch (e) {
+            console.error("Error en efectos del caballo:", e);
+            // Si falla, usar posición base
+            this.pos.y = baseY;
+            this.escala = 1;
+            this.rotacion = 0;
           }
 
-          // Corregir lógica de límites para asegurar que el caballo vuelva a aparecer
+          // MODIFICACIÓN: Mejorar lógica de límites para móviles
           if (this.pos.x > width + fw) {
+            // Si el caballo sale por la derecha
             if (ocultarLetras) {
-              console.log(
-                "El caballo avanzó demasiado sin mostrar letras, forzando inicio"
-              );
+              console.log("El caballo avanzó demasiado, forzando reinicio");
               this.pos.x = -fw;
               this.vel.x = abs(this.vel.x); // Asegurar dirección correcta
               letrasMostradas = false;
+              ocultarLetras = false; // Importante para móviles
               temporizador = frameCount + 180;
+            } else {
+              // Asegurar que vuelva desde la izquierda
+              this.pos.x = -fw;
             }
           }
 
           if (this.pos.x < -fw) {
             // Si no estamos ocultando letras, el caballo debe volver desde la derecha
             if (!ocultarLetras) {
+              console.log("Caballo reposicionado desde la derecha");
               this.pos.x = width + fw;
               this.vel.x = -abs(this.vel.x); // Asegurar dirección correcta
             }
-            // Si estamos ocultando letras y el caballo salió, no hacemos nada
-            // para permitir la transición al mensaje final
+            // Si estamos ocultando letras y el caballo salió, forzar el mensaje
+            else if (restartTimer === null) {
+              restartTimer = frameCount + (isMobile ? 30 : 120);
+              console.log(
+                "Caballo salió, iniciando reinicio con timer:",
+                restartTimer
+              );
+            }
           }
 
           // Verificación adicional para evitar que el caballo se atasque
-          if (!letrasMostradas && this.pos.x > width * 0.8) {
+          if (!letrasMostradas && this.pos.x > width * 0.6) {
             // Si el caballo llega demasiado lejos sin mostrar letras, forzar inicio
-            console.log(
-              "El caballo avanzó demasiado sin mostrar letras, forzando inicio"
-            );
+            console.log("Forzando mostrar letras - caballo demasiado avanzado");
             letrasMostradas = true;
             temporizador = frameCount + 180;
           }
@@ -1302,6 +1434,7 @@
         detectMobile();
 
         // Reposicionar el input
+        input.style("z-index", "20");
         if (isMobile) {
           input.style("font-size", "18px");
           input.style("padding", "12px 15px");
@@ -1338,7 +1471,10 @@
         setTimeout(initAnimationSafety, 2500);
       }
 
+      // Modificar función de reiniciar para ser más robusta
       function reiniciar() {
+        console.log("Reiniciando manualmente");
+
         // Seleccionar tema y efectos aleatorios
         temaActual = random(temasVisuales);
         efectoLetras = floor(random(6));
@@ -1360,7 +1496,7 @@
 
         // Reiniciar el fondo con cantidad adecuada según dispositivo
         fondoNiebla = [];
-        const numNiebla = isMobile ? 20 : 60;
+        const numNiebla = isMobile ? 15 : 60; // Reducir aún más para móviles
         for (let i = 0; i < numNiebla; i++) fondoNiebla.push(new Niebla());
 
         // Reiniciar audio de cabalgata
@@ -1377,6 +1513,11 @@
         console.log(
           `Tema aplicado: ${temaActual.nombre}, Efecto letras: ${efectoLetras}, Efecto caballo: ${efectoCaballo}, Efecto mensaje: ${efectoMensaje}`
         );
+
+        // Cambiar también el efecto del "Powered by"
+        currentPoweredEffect =
+          (currentPoweredEffect + 1) % poweredByEffects.length;
+        updatePoweredByEffect();
       }
 
       // Función para animar texto letra por letra
@@ -1401,6 +1542,94 @@
           pop();
         }
         pop();
+      }
+
+      // Nueva función para actualizar el efecto del "Powered by"
+      function updatePoweredByEffect() {
+        const poweredByElement = document.getElementById("poweredBy");
+        if (!poweredByElement) return;
+
+        // Restaurar estilos por defecto
+        poweredByElement.style.animation = "";
+        poweredByElement.style.color = "#ffffff";
+        poweredByElement.style.textShadow = "0 0 5px rgba(255, 255, 255, 0.8)";
+
+        const effect = poweredByEffects[currentPoweredEffect];
+        const color = poweredByColors[currentPoweredEffect];
+
+        switch (effect) {
+          case "normal":
+            poweredByElement.style.animation =
+              "poweredByGlow 4s infinite alternate";
+            break;
+          case "rainbow":
+            poweredByElement.style.animation = "none";
+            let rainbowStyle = "";
+            for (let i = 0; i < "Powered by Diego Markiewicz".length; i++) {
+              const hue = (i * 15) % 360;
+              rainbowStyle += `text-shadow: 0 0 5px hsl(${hue}, 100%, 70%);`;
+            }
+            poweredByElement.innerHTML = "Powered by Diego Markiewicz"
+              .split("")
+              .map((char, i) => {
+                const hue = (i * 15) % 360;
+                return `<span style="color: hsl(${hue}, 100%, 70%)">${char}</span>`;
+              })
+              .join("");
+            break;
+          case "pulse":
+            poweredByElement.style.animation =
+              "poweredByGlow 2s infinite alternate";
+            poweredByElement.style.color = color;
+            break;
+          case "flicker":
+            poweredByElement.style.animation = "none";
+            poweredByElement.style.color = color;
+            // Crear efecto de parpadeo con setInterval
+            clearInterval(window.flickerInterval);
+            window.flickerInterval = setInterval(() => {
+              poweredByElement.style.opacity = Math.random() * 0.5 + 0.5;
+            }, 100);
+            setTimeout(() => clearInterval(window.flickerInterval), 5000);
+            break;
+          case "wave":
+            poweredByElement.style.animation = "none";
+            poweredByElement.innerHTML = "Powered by Diego Markiewicz"
+              .split("")
+              .map((char, i) => {
+                return `<span style="display: inline-block; animation: waveChar 2s infinite ${
+                  i * 0.1
+                }s">${char}</span>`;
+              })
+              .join("");
+            const style = document.createElement("style");
+            style.textContent = `
+              @keyframes waveChar {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-5px); }
+              }
+            `;
+            document.head.appendChild(style);
+            poweredByElement.style.color = color;
+            break;
+          case "rotate":
+            poweredByElement.style.animation = "none";
+            poweredByElement.style.display = "inline-block";
+            poweredByElement.style.transform = "rotate(-5deg)";
+            poweredByElement.style.transformOrigin = "center";
+            poweredByElement.style.animation =
+              "rotateText 3s infinite alternate";
+            const rotateStyle = document.createElement("style");
+            rotateStyle.textContent = `
+              @keyframes rotateText {
+                0% { transform: rotate(-5deg); }
+                100% { transform: rotate(5deg); }
+              }
+            `;
+            document.head.appendChild(rotateStyle);
+            poweredByElement.style.color = color;
+            break;
+        }
       }
 
       // Asegurarnos de que el DOM esté cargado antes de añadir event listeners
@@ -1459,41 +1688,183 @@
         // Agregar interacción especial con la luna
         const moonContainer = document.querySelector(".moon-container");
         if (moonContainer) {
+          let clickCount = 0;
+          let lastClickTime = 0;
+
           moonContainer.addEventListener("click", function (e) {
+            const now = Date.now();
+            // Registrar clics secuenciales rápidos
+            if (now - lastClickTime < 500) {
+              clickCount++;
+            } else {
+              clickCount = 1;
+            }
+            lastClickTime = now;
+
             createClickEffect(e.clientX, e.clientY);
-            // Cambiar tema a uno aleatorio al hacer clic en la luna
-            temaActual = random(temasVisuales);
-            console.log(`Nuevo tema: ${temaActual.nombre}`);
 
-            // Efecto especial de luz
-            const flashDiv = document.createElement("div");
-            flashDiv.style.position = "fixed";
-            flashDiv.style.top = "0";
-            flashDiv.style.left = "0";
-            flashDiv.style.width = "100%";
-            flashDiv.style.height = "100%";
-            flashDiv.style.backgroundColor = "white";
-            flashDiv.style.opacity = "0.7";
-            flashDiv.style.zIndex = "100";
-            flashDiv.style.pointerEvents = "none";
-            document.body.appendChild(flashDiv);
+            // Diferentes efectos según el número de clics
+            if (clickCount >= 3) {
+              // Triple clic: efecto explosivo con muchas partículas
+              for (let i = 0; i < 50; i++) {
+                particles.push(new Particula(e.clientX, e.clientY, true));
+              }
+              // Reproducir todos los sonidos de pirotecnia juntos con bajo volumen
+              if (audioHabilitado && audioIniciado) {
+                for (let i = 0; i < sonidosFirework.length; i++) {
+                  try {
+                    sonidosFirework[i].setVolume(0.3);
+                    sonidosFirework[i].play();
+                  } catch (e) {
+                    console.error(`Error reproduciendo firework_${i + 1}:`, e);
+                  }
+                }
+              }
+              clickCount = 0;
+            } else if (clickCount === 2) {
+              // Doble clic: cambiar tema y hacer flash más intenso
+              temaActual = random(temasVisuales);
+              console.log(`Nuevo tema por doble clic: ${temaActual.nombre}`);
 
-            // Fadeout del flash
-            setTimeout(() => {
-              flashDiv.style.transition = "opacity 0.5s ease-out";
-              flashDiv.style.opacity = "0";
+              // Flash más intenso
+              const flashDiv = document.createElement("div");
+              flashDiv.style.position = "fixed";
+              flashDiv.style.top = "0";
+              flashDiv.style.left = "0";
+              flashDiv.style.width = "100%";
+              flashDiv.style.height = "100%";
+              flashDiv.style.backgroundColor = "white";
+              flashDiv.style.opacity = "0.9";
+              flashDiv.style.zIndex = "100";
+              flashDiv.style.pointerEvents = "none";
+              document.body.appendChild(flashDiv);
+
               setTimeout(() => {
-                document.body.removeChild(flashDiv);
-              }, 500);
-            }, 50);
+                flashDiv.style.transition = "opacity 0.8s ease-out";
+                flashDiv.style.opacity = "0";
+                setTimeout(() => {
+                  document.body.removeChild(flashDiv);
+                }, 800);
+              }, 80);
+            } else {
+              // Clic simple: cambiar tema con efecto normal
+              temaActual = random(temasVisuales);
+              console.log(`Nuevo tema: ${temaActual.nombre}`);
+
+              // Efecto de luz moderado
+              const flashDiv = document.createElement("div");
+              flashDiv.style.position = "fixed";
+              flashDiv.style.top = "0";
+              flashDiv.style.left = "0";
+              flashDiv.style.width = "100%";
+              flashDiv.style.height = "100%";
+              flashDiv.style.backgroundColor = "white";
+              flashDiv.style.opacity = "0.7";
+              flashDiv.style.zIndex = "100";
+              flashDiv.style.pointerEvents = "none";
+              document.body.appendChild(flashDiv);
+
+              setTimeout(() => {
+                flashDiv.style.transition = "opacity 0.5s ease-out";
+                flashDiv.style.opacity = "0";
+                setTimeout(() => {
+                  document.body.removeChild(flashDiv);
+                }, 500);
+              }, 50);
+            }
+
+            // Cambiar también el efecto del "Powered by" al hacer clic en la luna
+            currentPoweredEffect =
+              (currentPoweredEffect + 1) % poweredByEffects.length;
+            updatePoweredByEffect();
+
+            // Efectos adicionales en la luna misma
+            moonContainer.style.transition =
+              "transform 0.5s ease-out, filter 0.5s ease-out";
+            moonContainer.style.transform = `scale(${1 + clickCount * 0.1})`;
+
+            // Color aleatorio en las nubes según el tema
+            const nubes = moonContainer.querySelector(".clouds");
+            if (nubes) {
+              nubes.style.transition = "filter 0.5s ease-out";
+              let hue = temaActual.baseHue;
+              if (temaActual.nombre === "arcoiris") {
+                hue = Math.floor(Math.random() * 360);
+              }
+              nubes.style.filter = `hue-rotate(${hue}deg) saturate(${
+                temaActual.satMin / 50 + 1
+              })`;
+            }
+
+            // Volver a la normalidad después de un tiempo
+            setTimeout(() => {
+              moonContainer.style.transform = "";
+              if (nubes) {
+                nubes.style.filter = "";
+              }
+            }, 1500);
           });
 
+          // Mismo manejo para eventos touch
           moonContainer.addEventListener("touchstart", function (e) {
             e.preventDefault();
+            const now = Date.now();
+            if (now - lastClickTime < 500) {
+              clickCount++;
+            } else {
+              clickCount = 1;
+            }
+            lastClickTime = now;
+
             createClickEffect(e.touches[0].clientX, e.touches[0].clientY);
-            // Cambiar tema a uno aleatorio
+
+            // Aplicar los mismos efectos que en el clic normal
+            if (clickCount >= 3) {
+              for (let i = 0; i < 50; i++) {
+                particles.push(
+                  new Particula(
+                    e.touches[0].clientX,
+                    e.touches[0].clientY,
+                    true
+                  )
+                );
+              }
+              if (audioHabilitado && audioIniciado) {
+                for (let i = 0; i < sonidosFirework.length; i++) {
+                  try {
+                    sonidosFirework[i].setVolume(0.3);
+                    sonidosFirework[i].play();
+                  } catch (e) {}
+                }
+              }
+              clickCount = 0;
+            }
+
             temaActual = random(temasVisuales);
-            console.log(`Nuevo tema: ${temaActual.nombre}`);
+
+            // Cambiar también el efecto del "Powered by"
+            currentPoweredEffect =
+              (currentPoweredEffect + 1) % poweredByEffects.length;
+            updatePoweredByEffect();
+
+            // Efectos visuales en la luna
+            const nubes = moonContainer.querySelector(".clouds");
+            if (nubes) {
+              nubes.style.transition = "filter 0.5s ease-out";
+              let hue = temaActual.baseHue;
+              if (temaActual.nombre === "arcoiris") {
+                hue = Math.floor(Math.random() * 360);
+              }
+              nubes.style.filter = `hue-rotate(${hue}deg) saturate(${
+                temaActual.satMin / 50 + 1
+              })`;
+            }
+
+            setTimeout(() => {
+              if (nubes) {
+                nubes.style.filter = "";
+              }
+            }, 1500);
           });
         }
 
@@ -1585,6 +1956,14 @@
         window.addEventListener("touchstart", () => {
           lastActivity = Date.now();
         });
+
+        // Añadir verificador periódico del estado de la animación para dispositivos móviles
+        if (isMobile) {
+          setInterval(checkAnimationState, 3000);
+        }
+
+        // Inicializar el efecto del "Powered by"
+        updatePoweredByEffect();
       });
 
       function initAudio() {
@@ -1677,6 +2056,36 @@
           vertex(sx, sy);
         }
         endShape(CLOSE);
+      }
+
+      // NUEVA FUNCIÓN: Agregada para diagnosticar y recuperar el estado en móviles
+      function checkAnimationState() {
+        if (caballo) {
+          console.log(
+            `Estado: letrasMostradas=${letrasMostradas}, ocultarLetras=${ocultarLetras}, pos.x=${caballo.pos.x.toFixed(
+              2
+            )}, reinicio=${
+              restartTimer !== null ? frameCount - restartTimer : "null"
+            }`
+          );
+
+          // Verificar si el caballo está atascado fuera de la pantalla
+          if (caballo.pos.x < -fw * 2 || caballo.pos.x > width + fw * 2) {
+            console.log("Caballo fuera de rango, reposicionando");
+            caballo.pos.x = -fw;
+            caballo.vel.x = Math.abs(caballo.vel.x);
+            letrasMostradas = false;
+            ocultarLetras = false;
+            temporizador = 0;
+            restartTimer = null;
+          }
+
+          // Verificar si estamos esperando reinicio por mucho tiempo
+          if (restartTimer !== null && frameCount - restartTimer > 240) {
+            console.log("Reinicio atascado, forzando");
+            reiniciar();
+          }
+        }
       }
     </script>
 
