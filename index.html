@@ -51,12 +51,12 @@
         position: absolute;
         top: 20px;
         right: 20px;
-        width: 100px;
-        height: 100px;
+        width: 180px; /* Aumentado de 150px a 180px */
+        height: 180px; /* Aumentado de 150px a 180px */
         z-index: 5;
         overflow: hidden;
         border-radius: 50%;
-        box-shadow: 0 0 20px 5px rgba(255, 255, 255, 0.5);
+        box-shadow: 0 0 40px 15px rgba(255, 255, 255, 0.7); /* Sombra más pronunciada */
         animation: moonFloat 15s infinite ease-in-out;
         transform-origin: center center;
       }
@@ -131,8 +131,8 @@
         }
 
         .moon-container {
-          width: 80px;
-          height: 80px;
+          width: 150px; /* Aumentado de 120px a 150px */
+          height: 150px; /* Aumentado de 120px a 150px */
           top: 10px;
           right: 10px;
         }
@@ -146,8 +146,8 @@
         }
 
         .moon-container {
-          width: 60px;
-          height: 60px;
+          width: 120px; /* Aumentado de 100px a 120px */
+          height: 120px; /* Aumentado de 100px a 120px */
         }
       }
     </style>
@@ -262,17 +262,27 @@
       let efectoCaballo = 0; // Tipo de efecto para el caballo (0-5)
       let efectoMensaje = 0; // Tipo de efecto para el mensaje final (0-5)
 
+      // Nuevas variables para sonidos de pirotecnia
+      let sonidosFirework = [];
+      let ultimoSonidoFirework = -1; // Para seguir cuál se reprodujo por última vez
+
       function preload() {
         caballoSprite = loadImage("caballito.png");
         // Precargar sonidos pero no reproducirlos aún
         sonidoAparecer = loadSound(
           "aparecer.mp3",
-          () => console.log("Sonido aparecer cargado"),
+          () => {
+            console.log("Sonido aparecer cargado");
+            audioIniciado = true;
+          },
           (err) => console.error("Error cargando sonido aparecer:", err)
         );
         sonidoDesaparecer = loadSound(
           "desaparecer.mp3",
-          () => console.log("Sonido desaparecer cargado"),
+          () => {
+            console.log("Sonido desaparecer cargado");
+            audioIniciado = true;
+          },
           (err) => console.error("Error cargando sonido desaparecer:", err)
         );
         // Cargar sonido de cabalgata
@@ -284,6 +294,21 @@
           },
           (err) => console.error("Error cargando sonido cabalgata:", err)
         );
+
+        // Cargar los sonidos de pirotecnia
+        for (let i = 1; i <= 3; i++) {
+          sonidosFirework.push(
+            loadSound(
+              `firework_${i}.mp3`,
+              () => {
+                console.log(`Sonido firework_${i} cargado`);
+                audioIniciado = true;
+              },
+              (err) =>
+                console.error(`Error cargando sonido firework_${i}:`, err)
+            )
+          );
+        }
       }
 
       function setup() {
@@ -301,21 +326,8 @@
         sonidoDesaparecer.setVolume(0.7);
         sonidoCabalgata.setVolume(0.3); // Volumen más bajo para la cabalgata
 
-        // Forzar inicio de audio al cargar la página
-        userStartAudio()
-          .then(() => {
-            console.log("Audio context iniciado en setup");
-            audioContextIniciado = true;
-            sonidoCabalgata.loop();
-            sonidoCabalgata.stop();
-            updateAudioButtonState();
-          })
-          .catch((err) => {
-            console.error("Error iniciando audio:", err);
-          });
-
-        // Iniciar contexto de audio automáticamente
-        initAudio();
+        // Iniciar audio automáticamente sin requerir interacción del usuario
+        initAudioAggressively();
 
         // Crear y posicionar el input con tamaño adaptado
         input = createInput(word);
@@ -354,92 +366,57 @@
         for (let i = 0; i < numNiebla; i++) fondoNiebla.push(new Niebla());
 
         actualizarLetras();
+
+        // Añadir un temporizador de seguridad para iniciar el ciclo de la animación
+        // en caso de que no se dispare correctamente
+        setTimeout(initAnimationSafety, 2500);
       }
 
-      // Función para iniciar audio al cargar la página
-      function initAudio() {
-        // Iniciar el contexto de audio y configurar los sonidos
+      // Nueva función de seguridad para iniciar la animación aunque haya problemas con el audio
+      function initAnimationSafety() {
+        // Si la animación no ha comenzado aún
+        if (!letrasMostradas && caballo.pos.x < width / 4) {
+          console.log("Iniciando animación por seguridad");
+          // Mover el caballo a una posición donde se dispare el evento de mostrar letras
+          caballo.pos.x = width / 4 + 5;
+        }
+      }
+
+      // Nueva función para iniciar el audio de forma más agresiva
+      function initAudioAggressively() {
         try {
-          // Intentar reproducir audio silencioso para desbloquear audio en iOS/Safari
-          let silentSound = new p5.Oscillator();
-          silentSound.amp(0); // Volumen 0
-          silentSound.start();
-          silentSound.stop(0.1); // Detener después de 0.1 segundos
+          getAudioContext().resume();
+          audioContextIniciado = true;
 
-          getAudioContext()
-            .resume()
-            .then(() => {
-              console.log("Audio context iniciado correctamente");
-              audioContextIniciado = true;
-
-              // Configurar el sonido de cabalgata para loop pero aún no reproducirlo
-              if (audioHabilitado) {
-                setTimeout(() => {
-                  if (
-                    !sonidoCabalgata.isPlaying() &&
-                    caballo &&
-                    caballo.pos.x > -fw &&
-                    caballo.pos.x < width + fw
-                  ) {
-                    sonidoCabalgata.loop();
-                  }
-                }, 1000);
-              }
-
-              // Actualizar el botón con el estado actual
-              updateAudioButtonState();
-            })
-            .catch((error) => {
-              console.error("Error iniciando audio context:", error);
-            });
-        } catch (e) {
-          console.error("Error inicializando audio:", e);
-        }
-      }
-
-      // Cambia el método para manejar el estado del audio
-      function toggleAudio() {
-        audioHabilitado = !audioHabilitado;
-
-        // Actualizar el estado del botón
-        updateAudioButtonState();
-
-        if (audioHabilitado) {
-          // Reactivar el audio context si es necesario
-          if (getAudioContext().state !== "running") {
-            getAudioContext().resume();
-          }
-
-          // Reanudar reproducción de sonidos si corresponde
+          // Forzar decodificación de audio sin reproducirlo
           if (
-            caballo &&
-            caballo.pos.x > -fw &&
-            caballo.pos.x < width + fw &&
-            !ocultarLetras
+            sonidoAparecer.isLoaded() &&
+            sonidoDesaparecer.isLoaded() &&
+            sonidoCabalgata.isLoaded() &&
+            sonidosFirework.every((sound) => sound.isLoaded())
           ) {
-            if (!sonidoCabalgata.isPlaying()) {
-              sonidoCabalgata.loop();
-            }
+            updateAudioButtonState();
+            audioIniciado = true;
+          } else {
+            // Intentar cada 100ms hasta que los sonidos estén cargados
+            let audioCheckInterval = setInterval(() => {
+              if (
+                sonidoAparecer.isLoaded() &&
+                sonidoDesaparecer.isLoaded() &&
+                sonidoCabalgata.isLoaded() &&
+                sonidosFirework.every((sound) => sound.isLoaded())
+              ) {
+                clearInterval(audioCheckInterval);
+                audioIniciado = true;
+                updateAudioButtonState();
+              }
+            }, 100);
           }
-
-          console.log("Audio habilitado");
-        } else {
-          // Detener todos los sonidos
-          if (sonidoAparecer.isPlaying()) sonidoAparecer.stop();
-          if (sonidoDesaparecer.isPlaying()) sonidoDesaparecer.stop();
-          if (sonidoCabalgata.isPlaying()) sonidoCabalgata.stop();
-
-          console.log("Audio deshabilitado");
-        }
-      }
-
-      // Actualiza el texto del botón según el estado del audio
-      function updateAudioButtonState() {
-        const audioBtn = document.getElementById("audioBtn");
-        if (audioBtn) {
-          audioBtn.innerHTML = audioHabilitado
-            ? "🔊 Sonido ON"
-            : "🔇 Sonido OFF";
+        } catch (e) {
+          console.error("Error en initAudioAggressively:", e);
+          // Asegurar que la animación continúe aunque el audio falle
+          audioIniciado = true;
+          audioContextIniciado = true;
         }
       }
 
@@ -543,8 +520,18 @@
               console.log("Reproduciendo sonido aparecer en draw");
             } catch (e) {
               console.error("Error reproduciendo sonido aparecer:", e);
+              // Asegurar que la animación continúe aunque el sonido falle
+              audioIniciado = true;
             }
           }
+          letrasMostradas = true;
+          ocultarLetras = false;
+          temporizador = frameCount + 180;
+        }
+
+        // Verificación adicional: si el caballo está avanzado pero no se han mostrado las letras
+        if (!letrasMostradas && caballo.pos.x > width / 3) {
+          console.log("Forzando mostrar letras");
           letrasMostradas = true;
           ocultarLetras = false;
           temporizador = frameCount + 180;
@@ -572,7 +559,7 @@
           }
 
           if (restartTimer === null) {
-            restartTimer = frameCount + 180;
+            restartTimer = frameCount + 120; // Reducido de 180 a 120 para volver más rápido
           }
 
           // Mensaje final mejorado
@@ -671,11 +658,15 @@
 
           if (restartTimer !== null && frameCount > restartTimer) {
             caballo = new Caballo(-fw, height / 2 + 80);
+            caballo.vel.x = Math.abs(caballo.vel.x); // Asegurar dirección correcta
             letrasMostradas = false;
             ocultarLetras = false;
             temporizador = 0;
             restartTimer = null;
             actualizarLetras();
+
+            // Añadir temporizador de seguridad para el siguiente ciclo
+            setTimeout(initAnimationSafety, 2500);
           }
         }
 
@@ -877,7 +868,7 @@
           this.fila = 0;
           this.frame = 0;
           this.timer = 0;
-          this.sinOffset = random(100);
+          this.sinOffset = random(100); // Usar random aquí es seguro
           this.escala = 1;
           this.rotacion = 0;
         }
@@ -935,15 +926,37 @@
               break;
           }
 
+          // Corregir lógica de límites para asegurar que el caballo vuelva a aparecer
           if (this.pos.x > width + fw) {
             if (ocultarLetras) {
+              console.log(
+                "El caballo avanzó demasiado sin mostrar letras, forzando inicio"
+              );
               this.pos.x = -fw;
               this.vel.x = abs(this.vel.x); // Asegurar dirección correcta
+              letrasMostradas = false;
+              temporizador = frameCount + 180;
             }
           }
-          if (this.pos.x < -fw && ocultarLetras === false) {
-            this.pos.x = width + fw;
-            this.vel.x = -abs(this.vel.x); // Asegurar dirección correcta
+
+          if (this.pos.x < -fw) {
+            // Si no estamos ocultando letras, el caballo debe volver desde la derecha
+            if (!ocultarLetras) {
+              this.pos.x = width + fw;
+              this.vel.x = -abs(this.vel.x); // Asegurar dirección correcta
+            }
+            // Si estamos ocultando letras y el caballo salió, no hacemos nada
+            // para permitir la transición al mensaje final
+          }
+
+          // Verificación adicional para evitar que el caballo se atasque
+          if (!letrasMostradas && this.pos.x > width * 0.8) {
+            // Si el caballo llega demasiado lejos sin mostrar letras, forzar inicio
+            console.log(
+              "El caballo avanzó demasiado sin mostrar letras, forzando inicio"
+            );
+            letrasMostradas = true;
+            temporizador = frameCount + 180;
           }
         }
 
@@ -961,13 +974,15 @@
 
           // Aplicar efecto visual según el tema actual
           // Esto colorea ligeramente la imagen del caballo con el color del tema
-          tint(
-            temaActual.baseHue,
-            temaActual.nombre === "arcoiris"
-              ? 30 + sin(frameCount * 0.1) * 20
-              : 30,
-            100
-          );
+          if (temaActual.nombre === "arcoiris") {
+            tint(
+              (this.sinOffset + frameCount * 0.5) % 360,
+              30 + sin(frameCount * 0.1) * 20,
+              100
+            );
+          } else {
+            tint(temaActual.baseHue, 30, 100);
+          }
 
           image(caballoSprite, 0, 0, fw, fh, sx, sy, fw, fh);
           // Resetear el tint para no afectar otras imágenes
@@ -981,7 +996,6 @@
             if (temaActual.nombre === "arcoiris") {
               huePart = (frameCount * 0.5) % 360;
             }
-
             // Emitir partículas según el tema
             let part = new Particula(
               this.pos.x + random(-20, 20),
@@ -1065,22 +1079,6 @@
         }
       }
 
-      // Función para dibujar estrellas (para las chispas)
-      function star(x, y, radius1, radius2, npoints) {
-        let angle = TWO_PI / npoints;
-        let halfAngle = angle / 2.0;
-        beginShape();
-        for (let a = 0; a < TWO_PI; a += angle) {
-          let sx = cos(a) * radius2;
-          let sy = sin(a) * radius2;
-          vertex(sx, sy);
-          sx = cos(a + halfAngle) * radius1;
-          sy = sin(a + halfAngle) * radius1;
-          vertex(sx, sy);
-        }
-        endShape(CLOSE);
-      }
-
       class Estela {
         constructor(x, y) {
           this.pos = createVector(x, y);
@@ -1128,7 +1126,7 @@
 
       function mousePressed() {
         mouseInteractivo = true;
-
+        clickActive = true;
         // Intentar iniciar audio en respuesta a la interacción del usuario
         if (!audioContextIniciado) {
           initAudio();
@@ -1158,6 +1156,34 @@
         // Crear estrellas que salen disparadas
         for (let i = 0; i < 8; i++) {
           clickEffects.push(new ShootingStar(x, y));
+        }
+
+        // Reproducir un sonido de pirotecnia aleatorio si el audio está habilitado
+        if (audioHabilitado && audioIniciado && sonidosFirework.length > 0) {
+          // Seleccionar un sonido diferente al último reproducido
+          let nuevoIndice;
+          do {
+            nuevoIndice = floor(random(sonidosFirework.length));
+          } while (
+            nuevoIndice === ultimoSonidoFirework &&
+            sonidosFirework.length > 1
+          );
+
+          ultimoSonidoFirework = nuevoIndice;
+
+          try {
+            // Configurar volumen ligeramente aleatorio para mayor naturalidad
+            let volumen = random(0.4, 0.7);
+            sonidosFirework[nuevoIndice].setVolume(volumen);
+            sonidosFirework[nuevoIndice].play();
+            console.log(
+              `Reproduciendo firework_${
+                nuevoIndice + 1
+              } con volumen ${volumen.toFixed(2)}`
+            );
+          } catch (e) {
+            console.error("Error reproduciendo sonido de pirotecnia:", e);
+          }
         }
       }
 
@@ -1294,6 +1320,22 @@
         }
 
         actualizarLetras(); // Re-calcular posiciones de letras
+
+        // Reiniciar el fondo con cantidad adecuada según dispositivo
+        fondoNiebla = [];
+        const numNiebla = isMobile ? 20 : 60;
+        for (let i = 0; i < numNiebla; i++) fondoNiebla.push(new Niebla());
+
+        // Detener audio de cabalgata
+        if (audioHabilitado && sonidoCabalgata.isPlaying()) {
+          sonidoCabalgata.stop();
+        }
+
+        // Forzar audioIniciado para evitar problemas con la animación
+        audioIniciado = true;
+
+        // Añadir temporizador de seguridad
+        setTimeout(initAnimationSafety, 2500);
       }
 
       function reiniciar() {
@@ -1326,6 +1368,12 @@
           sonidoCabalgata.stop();
         }
 
+        // Forzar audioIniciado para evitar problemas con la animación
+        audioIniciado = true;
+
+        // Añadir temporizador de seguridad
+        setTimeout(initAnimationSafety, 2500);
+
         console.log(
           `Tema aplicado: ${temaActual.nombre}, Efecto letras: ${efectoLetras}, Efecto caballo: ${efectoCaballo}, Efecto mensaje: ${efectoMensaje}`
         );
@@ -1341,6 +1389,7 @@
           let char = texto.charAt(i);
           let xPos = i * charWidth;
           // Efecto de animación individual para cada letra
+          // Sin() es seguro aquí porque esta función se llama dentro de draw()
           let offset = sin(speed + i * 0.3) * (isMobile ? 5 : 8); // Reducir la animación en móviles
           let scaleFactor =
             0.8 + sin(speed * 0.7 + i * 0.5) * (isMobile ? 0.15 : 0.2);
@@ -1444,11 +1493,152 @@
             createClickEffect(e.touches[0].clientX, e.touches[0].clientY);
             // Cambiar tema a uno aleatorio
             temaActual = random(temasVisuales);
+            console.log(`Nuevo tema: ${temaActual.nombre}`);
           });
         }
+
+        // Iniciar audio después de CUALQUIER interacción del usuario con múltiples eventos
+        const iniciarAudio = function () {
+          if (!audioContextIniciado) {
+            console.log("Iniciando audio por interacción del usuario");
+            initAudio();
+          } else {
+            // Intentar reproducir audio directamente
+            if (audioHabilitado) {
+              setTimeout(() => {
+                // Intentar reproducir y detener todos los sonidos para forzar decodificación
+                try {
+                  sonidoAparecer.play();
+                  sonidoAparecer.stop();
+                  sonidoDesaparecer.play();
+                  sonidoDesaparecer.stop();
+                  sonidoCabalgata.play();
+                  sonidoCabalgata.stop();
+                } catch (e) {
+                  console.error("Error reproduciendo sonidos:", e);
+                }
+              }, 100);
+            }
+          }
+        };
+
+        // Aplicar el iniciador de audio a múltiples eventos
+        window.addEventListener("click", iniciarAudio, { once: true });
+        window.addEventListener("touchstart", iniciarAudio, { once: true });
+        window.addEventListener("keydown", iniciarAudio, { once: true });
+        window.addEventListener("mousedown", iniciarAudio, { once: true });
+
+        // Iniciar audio al cargar la página, sin esperar interacción
+        window.addEventListener("load", function () {
+          setTimeout(() => {
+            initAudioAggressively();
+            // Intentar iniciar el audio varias veces con intervalos
+            let initAttempts = 0;
+            let initInterval = setInterval(() => {
+              initAttempts++;
+              if (audioContextIniciado || initAttempts > 5) {
+                clearInterval(initInterval);
+                // Forzar audioIniciado para que la animación funcione aunque falle el audio
+                audioIniciado = true;
+              } else {
+                initAudioAggressively();
+              }
+            }, 1000);
+
+            // Añadir temporizador de seguridad adicional
+            setTimeout(initAnimationSafety, 3000);
+          }, 500);
+        });
+
+        // Añadir detector de actividad para asegurar continuidad
+        let lastActivity = Date.now();
+
+        function checkActivity() {
+          const now = Date.now();
+          // Si ha pasado más de 5 segundos sin actividad y la animación parece estar parada
+          if (
+            now - lastActivity > 5000 &&
+            caballo &&
+            !letrasMostradas &&
+            caballo.pos.x < width / 4
+          ) {
+            console.log("Reiniciando animación por inactividad");
+            // Mover caballo para forzar animación
+            caballo.pos.x = width / 4 + 5;
+            lastActivity = now;
+          }
+        }
+
+        // Verificar actividad cada 2 segundos
+        setInterval(checkActivity, 2000);
+
+        // Actualizar timestamp en eventos de usuario
+        window.addEventListener("click", () => {
+          lastActivity = Date.now();
+        });
+        window.addEventListener("mousemove", () => {
+          lastActivity = Date.now();
+        });
+        window.addEventListener("keydown", () => {
+          lastActivity = Date.now();
+        });
+        window.addEventListener("touchstart", () => {
+          lastActivity = Date.now();
+        });
       });
 
-      // Actualizar y mostrar efectos de click
+      function initAudio() {
+        getAudioContext()
+          .resume()
+          .then(() => {
+            audioContextIniciado = true;
+            console.log("Audio context iniciado");
+          });
+      }
+
+      function updateAudioButtonState() {
+        const btnAudio = document.getElementById("audioBtn");
+        if (btnAudio) {
+          btnAudio.textContent = audioHabilitado
+            ? "🔊 Sonido ON"
+            : "🔇 Sonido OFF";
+        }
+      }
+
+      function toggleAudio() {
+        audioHabilitado = !audioHabilitado;
+        updateAudioButtonState();
+
+        if (audioHabilitado) {
+          getAudioContext().resume();
+          if (getAudioContext().state !== "running") {
+            getAudioContext().resume();
+          }
+          // Reanudar reproducción de sonidos si corresponde
+          if (
+            caballo &&
+            caballo.pos.x > -fw &&
+            caballo.pos.x < width + fw &&
+            !ocultarLetras
+          ) {
+            if (!sonidoCabalgata.isPlaying()) {
+              sonidoCabalgata.loop();
+            }
+          }
+        } else {
+          // Detener todos los sonidos
+          if (sonidoAparecer.isPlaying()) sonidoAparecer.stop();
+          if (sonidoDesaparecer.isPlaying()) sonidoDesaparecer.stop();
+          if (sonidoCabalgata.isPlaying()) sonidoCabalgata.stop();
+          // Detener también los sonidos de pirotecnia
+          for (let i = 0; i < sonidosFirework.length; i++) {
+            if (sonidosFirework[i].isPlaying()) {
+              sonidosFirework[i].stop();
+            }
+          }
+        }
+      }
+
       function updateClickEffects() {
         // Actualizar temporizador de efectos
         if (clickActive) {
@@ -1462,8 +1652,6 @@
         for (let i = clickEffects.length - 1; i >= 0; i--) {
           clickEffects[i].update();
           clickEffects[i].display();
-
-          // Eliminar efectos completados
           if (clickEffects[i].isDone()) {
             clickEffects.splice(i, 1);
           }
@@ -1473,6 +1661,22 @@
         if (clickEffects.length > 20) {
           clickEffects.splice(0, clickEffects.length - 20);
         }
+      }
+
+      // Función para dibujar estrellas (para las chispas)
+      function star(x, y, radius1, radius2, npoints) {
+        let angle = TWO_PI / npoints;
+        let halfAngle = angle / 2.0;
+        beginShape();
+        for (let a = 0; a < TWO_PI; a += angle) {
+          let sx = cos(a) * radius2;
+          let sy = sin(a) * radius2;
+          vertex(sx, sy);
+          sx = cos(a + halfAngle) * radius1;
+          sy = sin(a + halfAngle) * radius1;
+          vertex(sx, sy);
+        }
+        endShape(CLOSE);
       }
     </script>
 
