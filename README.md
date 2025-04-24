@@ -23,16 +23,18 @@
 
 ## Sobre el Autor
 
-Soy Diego, un artista digital y desarrollador creativo apasionado por la combinación de arte y tecnología. Me especializo en crear experiencias interactivas que fusionan elementos visuales con programación para crear momentos mágicos para los usuarios.
+Soy Diego, un desarrollador creativo que disfruta mezclar código con diseño para crear cosas que se vean bien y funcionen mejor. Me gusta cuando una interfaz no solo hace lo que tiene que hacer, sino que además te saca una sonrisa.
 
-Mi trabajo se enfoca en:
+Este proyecto nació después de unas cuantas tazas de café y no menos de tres termos de mate. Lo armé probando ideas, rompiendo cosas, arreglándolas y sumándole un poco de magia visual hasta que todo encajó.
 
-- Explorar nuevas formas de expresión artística mediante código.
-- Crear interfaces intuitivas y atractivas que sorprendan al usuario.
-- Experimentar con animaciones, gráficos y efectos visuales.
-- Desarrollar proyectos que sean tanto visualmente impactantes como técnicamente interesantes.
+Me gusta:
 
-Este proyecto refleja mi estilo de trabajo: combinar elementos técnicos como la programación con la expresión artística, resultando en experiencias digitales que evocan emociones y crean momentos memorables.
+Usar el código como una forma de expresión (¡sí, se puede!).
+
+Hacer que las interfaces sean tan lindas como usables.
+
+Jugar con animaciones, efectos y esos detalles que hacen que digas “epa, esto está bueno”.
+
 
 ## Inspiración
 
