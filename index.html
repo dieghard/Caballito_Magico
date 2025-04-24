@@ -4,6 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Caballo Mágico</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐎</text></svg>"
+    />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/addons/p5.sound.min.js"></script>
     <style>
@@ -12,10 +16,20 @@
         overflow: hidden;
         background: black;
       }
-      #reiniciarBtn {
+
+      /* Contenedor para los botones para evitar superposición */
+      .button-container {
         position: absolute;
         bottom: 20px;
         right: 20px;
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        z-index: 10;
+      }
+
+      #reiniciarBtn,
+      #audioBtn {
         padding: 15px 20px;
         font-size: 18px;
         background: #ffffff88;
@@ -23,25 +37,128 @@
         border-radius: 8px;
         color: #000;
         cursor: pointer;
-        z-index: 10;
         transition: all 0.3s ease;
       }
-      #reiniciarBtn:hover {
+
+      #reiniciarBtn:hover,
+      #audioBtn:hover {
         background: #ffffffcc;
         transform: scale(1.05);
       }
+
+      /* Luna con nubes */
+      .moon-container {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 100px;
+        height: 100px;
+        z-index: 5;
+        overflow: hidden;
+        border-radius: 50%;
+        box-shadow: 0 0 20px 5px rgba(255, 255, 255, 0.5);
+        animation: moonFloat 15s infinite ease-in-out;
+        transform-origin: center center;
+      }
+
+      @keyframes moonFloat {
+        0% {
+          transform: scale(1) translate(0, 0);
+        }
+        25% {
+          transform: scale(1.1) translate(-10px, 5px);
+        }
+        50% {
+          transform: scale(1.15) translate(0, 10px);
+        }
+        75% {
+          transform: scale(1.1) translate(10px, 5px);
+        }
+        100% {
+          transform: scale(1) translate(0, 0);
+        }
+      }
+
+      .moon-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        animation: moonGlow 8s infinite alternate;
+      }
+
+      @keyframes moonGlow {
+        0% {
+          filter: brightness(1);
+        }
+        50% {
+          filter: brightness(1.2) sepia(0.2);
+        }
+        100% {
+          filter: brightness(1.1) sepia(0.1);
+        }
+      }
+
+      .clouds {
+        position: absolute;
+        width: 200%;
+        height: 100%;
+        background: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogICAgPGRlZnM+CiAgICAgIDxmaWx0ZXIgaWQ9ImYxIiB4PSIwIiB5PSIwIj4KICAgICAgICA8ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC4wMSIgbnVtT2N0YXZlcz0iMyIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPgogICAgICA8L2ZpbHRlcj4KICAgIDwvZGVmcz4KICAgIDxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNmZmZmZmZhMCIgZmlsdGVyPSJ1cmwoI2YxKSIvPgo8L3N2Zz4=");
+        opacity: 0.5;
+        animation: cloudDrift 20s linear infinite;
+        pointer-events: none;
+      }
+
+      @keyframes cloudDrift {
+        0% {
+          transform: translateX(0);
+        }
+        100% {
+          transform: translateX(-50%);
+        }
+      }
+
       /* Estilos adaptados para móvil */
       @media (max-width: 768px) {
-        #reiniciarBtn {
+        .button-container {
           bottom: 30px;
           right: 30px;
+        }
+
+        #reiniciarBtn,
+        #audioBtn {
           padding: 18px 25px;
           font-size: 22px;
+        }
+
+        .moon-container {
+          width: 80px;
+          height: 80px;
+          top: 10px;
+          right: 10px;
+        }
+      }
+
+      /* Ajustes adicionales para pantallas muy pequeñas */
+      @media (max-width: 380px) {
+        .button-container {
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .moon-container {
+          width: 60px;
+          height: 60px;
         }
       }
     </style>
   </head>
   <body>
+    <!-- Imagen de la luna con efecto de nubes -->
+    <div class="moon-container">
+      <img src="Luna.webp" alt="Luna llena" class="moon-img" />
+      <div class="clouds"></div>
+    </div>
+
     <script>
       let caballoSprite;
       let sonidoAparecer;
@@ -68,6 +185,18 @@
       let isMobile = false;
       // Factor de reducción para efectos visuales en móviles
       let efectosReducidos = 1;
+      // Identificar específicamente dispositivos Samsung
+      let isSamsungFlip = false;
+      // Variables para control de audio
+      let audioHabilitado = true; // Por defecto, el audio está habilitado
+      let audioIniciado = false; // Inicializado como false hasta confirmar que se cargó correctamente
+      let audioContextIniciado = false;
+      // Nuevo sonido para cabalgata
+      let sonidoCabalgata;
+      // Efectos de click
+      let clickActive = false;
+      let clickEffects = [];
+      let clickEffectTimer = 0;
 
       // Nuevas variables para efectos aleatorios
       let temaActual; // Guarda el tema visual actual
@@ -135,8 +264,26 @@
 
       function preload() {
         caballoSprite = loadImage("caballito.png");
-        sonidoAparecer = loadSound("aparecer.mp3");
-        sonidoDesaparecer = loadSound("desaparecer.mp3");
+        // Precargar sonidos pero no reproducirlos aún
+        sonidoAparecer = loadSound(
+          "aparecer.mp3",
+          () => console.log("Sonido aparecer cargado"),
+          (err) => console.error("Error cargando sonido aparecer:", err)
+        );
+        sonidoDesaparecer = loadSound(
+          "desaparecer.mp3",
+          () => console.log("Sonido desaparecer cargado"),
+          (err) => console.error("Error cargando sonido desaparecer:", err)
+        );
+        // Cargar sonido de cabalgata
+        sonidoCabalgata = loadSound(
+          "caballo_cabalgata.mp3",
+          () => {
+            console.log("Sonido cabalgata cargado");
+            audioIniciado = true; // Marcar como iniciado cuando se carga correctamente
+          },
+          (err) => console.error("Error cargando sonido cabalgata:", err)
+        );
       }
 
       function setup() {
@@ -149,9 +296,26 @@
         // Detectar si es dispositivo móvil
         detectMobile();
 
-        // Ajustar volumen del sonido aparecer (reducido al 40%)
+        // Configurar volumen de sonidos
         sonidoAparecer.setVolume(0.4);
         sonidoDesaparecer.setVolume(0.7);
+        sonidoCabalgata.setVolume(0.3); // Volumen más bajo para la cabalgata
+
+        // Forzar inicio de audio al cargar la página
+        userStartAudio()
+          .then(() => {
+            console.log("Audio context iniciado en setup");
+            audioContextIniciado = true;
+            sonidoCabalgata.loop();
+            sonidoCabalgata.stop();
+            updateAudioButtonState();
+          })
+          .catch((err) => {
+            console.error("Error iniciando audio:", err);
+          });
+
+        // Iniciar contexto de audio automáticamente
+        initAudio();
 
         // Crear y posicionar el input con tamaño adaptado
         input = createInput(word);
@@ -192,6 +356,93 @@
         actualizarLetras();
       }
 
+      // Función para iniciar audio al cargar la página
+      function initAudio() {
+        // Iniciar el contexto de audio y configurar los sonidos
+        try {
+          // Intentar reproducir audio silencioso para desbloquear audio en iOS/Safari
+          let silentSound = new p5.Oscillator();
+          silentSound.amp(0); // Volumen 0
+          silentSound.start();
+          silentSound.stop(0.1); // Detener después de 0.1 segundos
+
+          getAudioContext()
+            .resume()
+            .then(() => {
+              console.log("Audio context iniciado correctamente");
+              audioContextIniciado = true;
+
+              // Configurar el sonido de cabalgata para loop pero aún no reproducirlo
+              if (audioHabilitado) {
+                setTimeout(() => {
+                  if (
+                    !sonidoCabalgata.isPlaying() &&
+                    caballo &&
+                    caballo.pos.x > -fw &&
+                    caballo.pos.x < width + fw
+                  ) {
+                    sonidoCabalgata.loop();
+                  }
+                }, 1000);
+              }
+
+              // Actualizar el botón con el estado actual
+              updateAudioButtonState();
+            })
+            .catch((error) => {
+              console.error("Error iniciando audio context:", error);
+            });
+        } catch (e) {
+          console.error("Error inicializando audio:", e);
+        }
+      }
+
+      // Cambia el método para manejar el estado del audio
+      function toggleAudio() {
+        audioHabilitado = !audioHabilitado;
+
+        // Actualizar el estado del botón
+        updateAudioButtonState();
+
+        if (audioHabilitado) {
+          // Reactivar el audio context si es necesario
+          if (getAudioContext().state !== "running") {
+            getAudioContext().resume();
+          }
+
+          // Reanudar reproducción de sonidos si corresponde
+          if (
+            caballo &&
+            caballo.pos.x > -fw &&
+            caballo.pos.x < width + fw &&
+            !ocultarLetras
+          ) {
+            if (!sonidoCabalgata.isPlaying()) {
+              sonidoCabalgata.loop();
+            }
+          }
+
+          console.log("Audio habilitado");
+        } else {
+          // Detener todos los sonidos
+          if (sonidoAparecer.isPlaying()) sonidoAparecer.stop();
+          if (sonidoDesaparecer.isPlaying()) sonidoDesaparecer.stop();
+          if (sonidoCabalgata.isPlaying()) sonidoCabalgata.stop();
+
+          console.log("Audio deshabilitado");
+        }
+      }
+
+      // Actualiza el texto del botón según el estado del audio
+      function updateAudioButtonState() {
+        const audioBtn = document.getElementById("audioBtn");
+        if (audioBtn) {
+          audioBtn.innerHTML = audioHabilitado
+            ? "🔊 Sonido ON"
+            : "🔇 Sonido OFF";
+        }
+      }
+
       function detectMobile() {
         // Detectar si es un dispositivo móvil
         isMobile =
@@ -199,9 +450,27 @@
             navigator.userAgent
           ) || windowWidth < 768;
 
+        // Detectar específicamente Samsung Galaxy Flip
+        isSamsungFlip = /SM-F|Galaxy Z Flip/i.test(navigator.userAgent);
+
+        // Si es Samsung Flip pero no fue detectado por el User Agent, usar el ratio de pantalla como indicador adicional
+        if (
+          !isSamsungFlip &&
+          isMobile &&
+          windowWidth / windowHeight > 0.45 &&
+          windowWidth / windowHeight < 0.55
+        ) {
+          isSamsungFlip = true;
+        }
+
+        console.log("Es móvil:", isMobile, "Es Samsung Flip:", isSamsungFlip);
+
         // Ajustar factor de reducción para efectos visuales
         if (isMobile) {
           efectosReducidos = 0.4; // Reducir efectos al 40%
+          if (isSamsungFlip) {
+            efectosReducidos = 0.3; // Aún más reducidos para el Flip
+          }
         }
       }
 
@@ -245,7 +514,6 @@
             : 0;
         background(220, 70, 10, constrain(255 - fade, 0, 255));
 
-        // Reducir frecuencia de generación de estrellas en móviles
         if (frameCount % (isMobile ? 60 : 30) === 0) {
           particles.push(new Estrella(random(width), random(height)));
         }
@@ -262,7 +530,21 @@
           caballo.pos.x > width / 4 &&
           !sonidoAparecer.isPlaying()
         ) {
-          sonidoAparecer.play();
+          // Solo reproducir sonido si está habilitado
+          if (audioHabilitado && audioIniciado) {
+            try {
+              sonidoAparecer.play();
+
+              // Iniciar sonido de cabalgata
+              if (!sonidoCabalgata.isPlaying()) {
+                sonidoCabalgata.loop();
+              }
+
+              console.log("Reproduciendo sonido aparecer en draw");
+            } catch (e) {
+              console.error("Error reproduciendo sonido aparecer:", e);
+            }
+          }
           letrasMostradas = true;
           ocultarLetras = false;
           temporizador = frameCount + 180;
@@ -272,10 +554,23 @@
           ocultarLetras = true;
           caballo.vel.mult(-1);
           caballo.frame = 0;
-          sonidoDesaparecer.play();
+          // Solo reproducir sonido si está habilitado
+          if (audioHabilitado) {
+            try {
+              sonidoDesaparecer.play();
+              console.log("Reproduciendo sonido desaparecer");
+            } catch (e) {
+              console.error("Error reproduciendo sonido desaparecer:", e);
+            }
+          }
         }
 
         if (letrasMostradas && ocultarLetras && caballo.pos.x < -fw) {
+          // Detener el sonido de cabalgata cuando el caballo sale de la pantalla
+          if (audioHabilitado && sonidoCabalgata.isPlaying()) {
+            sonidoCabalgata.stop();
+          }
+
           if (restartTimer === null) {
             restartTimer = frameCount + 180;
           }
@@ -285,7 +580,16 @@
 
           // Aplicar diferentes efectos al mensaje según el tipo seleccionado aleatoriamente
           push();
-          translate(width / 2, height * 0.75);
+          // Ajustar posición para Samsung Flip y otros móviles
+          let yPos = isSamsungFlip
+            ? height * 0.65
+            : isMobile
+            ? height * 0.7
+            : height * 0.75;
+          // Ajustar tamaño de texto para dispositivos móviles
+          let textoTamanio = isSamsungFlip ? 38 : isMobile ? 42 : 48;
+
+          translate(width / 2, yPos);
 
           switch (efectoMensaje) {
             case 0: // Pulso ondulante
@@ -327,7 +631,7 @@
               temaActual.briMax,
               40 - i * 8
             );
-            textSize(48 + i * 4);
+            textSize(textoTamanio + i * 3);
 
             // Para el efecto 5, animamos letra por letra
             if (efectoMensaje === 5) {
@@ -337,14 +641,14 @@
             }
           }
 
-          // El mensaje final con colores del tema
+          // El mensaje final con color principal del tema
           fill(
             hueMensaje,
             temaActual.satMax,
             temaActual.briMax,
             sin(frameCount * 0.1) * 30 + 70
           );
-          textSize(48);
+          textSize(textoTamanio);
 
           // Para el efecto 5, animamos letra por letra
           if (efectoMensaje === 5) {
@@ -359,7 +663,7 @@
             particles.push(
               new Particula(
                 width / 2 + random(-150, 150),
-                height * 0.75 + random(-30, 20),
+                yPos + random(-30, 20),
                 true
               )
             );
@@ -523,6 +827,26 @@
         caballo.update();
         caballo.display();
 
+        // Manejar el sonido de cabalgata según el movimiento del caballo
+        if (audioHabilitado && audioIniciado) {
+          // Si el caballo está en pantalla y moviéndose, reproducir sonido de cabalgata
+          if (
+            caballo.pos.x > -fw &&
+            caballo.pos.x < width + fw &&
+            Math.abs(caballo.vel.x) > 0 &&
+            !sonidoCabalgata.isPlaying()
+          ) {
+            sonidoCabalgata.loop();
+          }
+          // Si el caballo está fuera de la pantalla, detener el sonido
+          else if (
+            (caballo.pos.x <= -fw || caballo.pos.x >= width + fw) &&
+            sonidoCabalgata.isPlaying()
+          ) {
+            sonidoCabalgata.stop();
+          }
+        }
+
         // Limitar número máximo de partículas en móviles para mejorar rendimiento
         const maxParticulas = isMobile ? 50 : 500;
         if (particles.length > maxParticulas) {
@@ -541,6 +865,9 @@
         if (estelas.length > maxEstelas) {
           estelas.splice(0, estelas.length - maxEstelas);
         }
+
+        // Actualizar y mostrar efectos de click
+        updateClickEffects();
       }
 
       class Caballo {
@@ -643,7 +970,6 @@
           );
 
           image(caballoSprite, 0, 0, fw, fh, sx, sy, fw, fh);
-
           // Resetear el tint para no afectar otras imágenes
           noTint();
           pop();
@@ -702,7 +1028,6 @@
           push();
           translate(this.pos.x, this.pos.y);
           rotate(this.rotacion);
-
           if (this.tipo === "brillo") {
             fill(this.hue, 80, 100, this.alpha);
             ellipse(0, 0, this.size);
@@ -803,9 +1128,140 @@
 
       function mousePressed() {
         mouseInteractivo = true;
+
+        // Intentar iniciar audio en respuesta a la interacción del usuario
+        if (!audioContextIniciado) {
+          initAudio();
+        }
+
         // Crear un efecto de explosión de partículas donde se hace clic
         for (let i = 0; i < 15; i++) {
           particles.push(new Particula(mouseX, mouseY, true));
+        }
+
+        // Crear efectos especiales en el punto de click
+        createClickEffect(mouseX, mouseY);
+      }
+
+      // Crear efectos especiales de click
+      function createClickEffect(x, y) {
+        // Activar efectos por tiempo limitado
+        clickActive = true;
+        clickEffectTimer = 30; // Duración en frames
+
+        // Crear onda expansiva
+        clickEffects.push(new CircleWave(x, y));
+
+        // Crear destello
+        clickEffects.push(new FlashEffect(x, y));
+
+        // Crear estrellas que salen disparadas
+        for (let i = 0; i < 8; i++) {
+          clickEffects.push(new ShootingStar(x, y));
+        }
+      }
+
+      // Onda circular que se expande
+      class CircleWave {
+        constructor(x, y) {
+          this.pos = createVector(x, y);
+          this.radius = 5;
+          this.maxRadius = 100;
+          this.alpha = 100;
+          this.hue = random(360);
+          this.strokeWeight = 3;
+        }
+
+        update() {
+          this.radius += 4;
+          this.alpha = map(this.radius, 5, this.maxRadius, 100, 0);
+          this.strokeWeight = map(this.radius, 5, this.maxRadius, 3, 0.5);
+        }
+
+        display() {
+          push();
+          stroke(this.hue, 80, 100, this.alpha);
+          strokeWeight(this.strokeWeight);
+          noFill();
+          ellipse(this.pos.x, this.pos.y, this.radius * 2);
+          pop();
+        }
+
+        isDone() {
+          return this.radius >= this.maxRadius;
+        }
+      }
+
+      // Destello rápido
+      class FlashEffect {
+        constructor(x, y) {
+          this.pos = createVector(x, y);
+          this.radius = 30;
+          this.alpha = 90;
+          this.hue = random(360);
+          this.life = 10;
+        }
+
+        update() {
+          this.life--;
+          this.alpha = map(this.life, 10, 0, 90, 0);
+        }
+
+        display() {
+          push();
+          noStroke();
+          fill(this.hue, 70, 100, this.alpha);
+          // Dibujar destello con forma de estrella simple
+          beginShape();
+          for (let i = 0; i < 10; i++) {
+            let rad = i % 2 === 0 ? this.radius : this.radius * 0.4;
+            let angle = map(i, 0, 10, 0, TWO_PI);
+            let x = this.pos.x + cos(angle) * rad;
+            let y = this.pos.y + sin(angle) * rad;
+            vertex(x, y);
+          }
+          endShape(CLOSE);
+          pop();
+        }
+
+        isDone() {
+          return this.life <= 0;
+        }
+      }
+
+      // Estrellas que salen disparadas
+      class ShootingStar {
+        constructor(x, y) {
+          this.pos = createVector(x, y);
+          this.vel = p5.Vector.random2D().mult(random(3, 7));
+          this.size = random(5, 12);
+          this.alpha = 100;
+          this.hue = random(360);
+          this.rotSpeed = random(-0.2, 0.2);
+          this.rot = random(TWO_PI);
+          this.life = random(20, 40);
+        }
+
+        update() {
+          this.pos.add(this.vel);
+          this.vel.mult(0.95); // Desaceleración
+          this.rot += this.rotSpeed;
+          this.life--;
+          this.alpha = map(this.life, 40, 0, 100, 0);
+        }
+
+        display() {
+          push();
+          translate(this.pos.x, this.pos.y);
+          rotate(this.rot);
+          noStroke();
+          fill(this.hue, 100, 100, this.alpha);
+          star(0, 0, this.size * 0.5, this.size, 5);
+          pop();
+        }
+
+        isDone() {
+          return this.life <= 0;
         }
       }
 
@@ -825,6 +1281,11 @@
           input.style("padding", "12px 15px");
           input.style("width", "80%");
           input.position(windowWidth / 2 - input.width / 2, 30);
+
+          // Mantener foco en input para evitar problemas de teclado en móviles
+          if (document.activeElement === input.elt) {
+            setTimeout(() => input.elt.focus(), 100);
+          }
         } else {
           input.style("font-size", "16px");
           input.style("padding", "8px 10px");
@@ -841,20 +1302,29 @@
         efectoLetras = floor(random(6));
         efectoCaballo = floor(random(6));
         efectoMensaje = floor(random(6));
-
-        // Reiniciar la animación
         caballo = new Caballo(-fw, height / 2 + 80);
         letrasMostradas = false;
         ocultarLetras = false;
         temporizador = 0;
         restartTimer = null;
-        input.value(word);
-        actualizarLetras();
+
+        // Preservar el valor actual antes de reiniciar
+        let valorActual = input.value();
+        word = valorActual;
+        setTimeout(() => {
+          input.value(valorActual);
+          actualizarLetras();
+        }, 50);
 
         // Reiniciar el fondo con cantidad adecuada según dispositivo
         fondoNiebla = [];
         const numNiebla = isMobile ? 20 : 60;
         for (let i = 0; i < numNiebla; i++) fondoNiebla.push(new Niebla());
+
+        // Reiniciar audio de cabalgata
+        if (audioHabilitado && sonidoCabalgata.isPlaying()) {
+          sonidoCabalgata.stop();
+        }
 
         console.log(
           `Tema aplicado: ${temaActual.nombre}, Efecto letras: ${efectoLetras}, Efecto caballo: ${efectoCaballo}, Efecto mensaje: ${efectoMensaje}`
@@ -863,30 +1333,153 @@
 
       // Función para animar texto letra por letra
       function drawAnimatedText(texto, x, y, speed) {
-        let charWidth = textWidth("M") * 0.6; // Aproximación del ancho de una letra
+        let charWidth = isMobile ? textWidth("M") * 0.5 : textWidth("M") * 0.6; // Reducir ancho en móviles
         let totalWidth = texto.length * charWidth;
-
         push();
         translate(x - totalWidth / 2, y);
-
         for (let i = 0; i < texto.length; i++) {
           let char = texto.charAt(i);
           let xPos = i * charWidth;
-
           // Efecto de animación individual para cada letra
-          let offset = sin(speed + i * 0.3) * 8;
-          let scale = 0.8 + sin(speed * 0.7 + i * 0.5) * 0.2;
-
+          let offset = sin(speed + i * 0.3) * (isMobile ? 5 : 8); // Reducir la animación en móviles
+          let scaleFactor =
+            0.8 + sin(speed * 0.7 + i * 0.5) * (isMobile ? 0.15 : 0.2);
           push();
           translate(xPos, offset);
-          scale(scale);
+          // Cambiar scale por una matriz de transformación explícita para evitar errores
+          scale(scaleFactor, scaleFactor);
           text(char, 0, 0);
           pop();
         }
-
         pop();
       }
+
+      // Asegurarnos de que el DOM esté cargado antes de añadir event listeners
+      document.addEventListener("DOMContentLoaded", function () {
+        // Mejorar el manejo del botón reiniciar en dispositivos móviles
+        const btnReiniciar = document.getElementById("reiniciarBtn");
+        if (btnReiniciar) {
+          btnReiniciar.addEventListener(
+            "touchstart",
+            function (e) {
+              e.preventDefault(); // Prevenir comportamiento predeterminado
+              reiniciar();
+            },
+            { passive: false }
+          );
+        }
+
+        // Añadir listener para el botón de audio
+        const btnAudio = document.getElementById("audioBtn");
+        if (btnAudio) {
+          btnAudio.addEventListener("click", toggleAudio);
+          btnAudio.addEventListener(
+            "touchstart",
+            function (e) {
+              e.preventDefault();
+              toggleAudio();
+            },
+            { passive: false }
+          );
+        }
+
+        // Iniciar audio después de una interacción del usuario (necesario en algunos navegadores)
+        window.addEventListener(
+          "click",
+          function () {
+            if (!audioContextIniciado) {
+              initAudio();
+            }
+          },
+          { once: true }
+        );
+
+        // Iniciar audio después de cualquier interacción del usuario
+        document.body.addEventListener("click", function () {
+          if (!audioContextIniciado) {
+            initAudio();
+          }
+        });
+
+        document.body.addEventListener("touchstart", function () {
+          if (!audioContextIniciado) {
+            initAudio();
+          }
+        });
+
+        // Agregar interacción especial con la luna
+        const moonContainer = document.querySelector(".moon-container");
+        if (moonContainer) {
+          moonContainer.addEventListener("click", function (e) {
+            createClickEffect(e.clientX, e.clientY);
+            // Cambiar tema a uno aleatorio al hacer clic en la luna
+            temaActual = random(temasVisuales);
+            console.log(`Nuevo tema: ${temaActual.nombre}`);
+
+            // Efecto especial de luz
+            const flashDiv = document.createElement("div");
+            flashDiv.style.position = "fixed";
+            flashDiv.style.top = "0";
+            flashDiv.style.left = "0";
+            flashDiv.style.width = "100%";
+            flashDiv.style.height = "100%";
+            flashDiv.style.backgroundColor = "white";
+            flashDiv.style.opacity = "0.7";
+            flashDiv.style.zIndex = "100";
+            flashDiv.style.pointerEvents = "none";
+            document.body.appendChild(flashDiv);
+
+            // Fadeout del flash
+            setTimeout(() => {
+              flashDiv.style.transition = "opacity 0.5s ease-out";
+              flashDiv.style.opacity = "0";
+              setTimeout(() => {
+                document.body.removeChild(flashDiv);
+              }, 500);
+            }, 50);
+          });
+
+          moonContainer.addEventListener("touchstart", function (e) {
+            e.preventDefault();
+            createClickEffect(e.touches[0].clientX, e.touches[0].clientY);
+            // Cambiar tema a uno aleatorio
+            temaActual = random(temasVisuales);
+          });
+        }
+      });
+
+      // Actualizar y mostrar efectos de click
+      function updateClickEffects() {
+        // Actualizar temporizador de efectos
+        if (clickActive) {
+          clickEffectTimer--;
+          if (clickEffectTimer <= 0) {
+            clickActive = false;
+          }
+        }
+
+        // Actualizar y mostrar todos los efectos de click
+        for (let i = clickEffects.length - 1; i >= 0; i--) {
+          clickEffects[i].update();
+          clickEffects[i].display();
+
+          // Eliminar efectos completados
+          if (clickEffects[i].isDone()) {
+            clickEffects.splice(i, 1);
+          }
+        }
+
+        // Limitar el número de efectos para rendimiento
+        if (clickEffects.length > 20) {
+          clickEffects.splice(0, clickEffects.length - 20);
+        }
+      }
     </script>
-    <button id="reiniciarBtn" onclick="reiniciar()">🔄 Reiniciar</button>
+
+    <!-- Contenedor para los botones que evita superposición -->
+    <div class="button-container">
+      <button id="audioBtn">🔊 Sonido ON</button>
+      <button id="reiniciarBtn" onclick="reiniciar()">🔄 Reiniciar</button>
+    </div>
   </body>
 </html>
