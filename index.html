@@ -2,6 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Caballo Mágico</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/addons/p5.sound.min.js"></script>
@@ -15,8 +16,8 @@
         position: absolute;
         bottom: 20px;
         right: 20px;
-        padding: 12px 18px;
-        font-size: 16px;
+        padding: 15px 20px;
+        font-size: 18px;
         background: #ffffff88;
         border: 2px solid #ffffff;
         border-radius: 8px;
@@ -28,6 +29,15 @@
       #reiniciarBtn:hover {
         background: #ffffffcc;
         transform: scale(1.05);
+      }
+      /* Estilos adaptados para móvil */
+      @media (max-width: 768px) {
+        #reiniciarBtn {
+          bottom: 30px;
+          right: 30px;
+          padding: 18px 25px;
+          font-size: 22px;
+        }
       }
     </style>
   </head>
@@ -53,6 +63,11 @@
       let letrasObj = []; // Objetos para animar cada letra
       let hueOffset = 0;
       let mouseInteractivo = false;
+
+      // Variable para detectar dispositivos móviles
+      let isMobile = false;
+      // Factor de reducción para efectos visuales en móviles
+      let efectosReducidos = 1;
 
       // Nuevas variables para efectos aleatorios
       let temaActual; // Guarda el tema visual actual
@@ -131,12 +146,23 @@
         textSize(120);
         textAlign(CENTER, CENTER);
 
+        // Detectar si es dispositivo móvil
+        detectMobile();
+
         // Ajustar volumen del sonido aparecer (reducido al 40%)
         sonidoAparecer.setVolume(0.4);
         sonidoDesaparecer.setVolume(0.7);
 
+        // Crear y posicionar el input con tamaño adaptado
         input = createInput(word);
-        input.position(20, 20);
+        if (isMobile) {
+          input.style("font-size", "18px");
+          input.style("padding", "12px 15px");
+          input.style("width", "80%");
+          input.position(windowWidth / 2 - input.width / 2, 30);
+        } else {
+          input.position(20, 20);
+        }
         input.input(() => {
           if (input.value().length <= 20) {
             // Aumentar a 20 caracteres
@@ -158,14 +184,37 @@
         );
 
         caballo = new Caballo(-fw, height / 2 + 80);
-        for (let i = 0; i < 60; i++) fondoNiebla.push(new Niebla());
+
+        // Reducir la cantidad de elementos en el fondo para móviles
+        const numNiebla = isMobile ? 20 : 60;
+        for (let i = 0; i < numNiebla; i++) fondoNiebla.push(new Niebla());
+
         actualizarLetras();
+      }
+
+      function detectMobile() {
+        // Detectar si es un dispositivo móvil
+        isMobile =
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+            navigator.userAgent
+          ) || windowWidth < 768;
+
+        // Ajustar factor de reducción para efectos visuales
+        if (isMobile) {
+          efectosReducidos = 0.4; // Reducir efectos al 40%
+        }
       }
 
       function actualizarLetras() {
         letrasObj = [];
-        // Calcular espaciado adaptativo según longitud de la palabra
-        let espaciado = word.length > 10 ? 40 : 60;
+        // Calcular espaciado adaptativo según longitud de la palabra y si es móvil
+        let espaciado = isMobile
+          ? word.length > 7
+            ? 25
+            : 35
+          : word.length > 10
+          ? 40
+          : 60;
 
         for (let i = 0; i < word.length; i++) {
           letrasObj.push({
@@ -173,7 +222,13 @@
             x: width / 2 - (word.length * espaciado) / 2 + i * espaciado,
             y: height / 2,
             size: 0,
-            targetSize: word.length > 10 ? 80 : 120, // Tamaño más pequeño para palabras largas
+            targetSize: isMobile
+              ? word.length > 7
+                ? 50
+                : 70
+              : word.length > 10
+              ? 80
+              : 120, // Tamaño más pequeño para móviles
             alpha: 0,
             offsetY: 0,
             velY: 0,
@@ -190,8 +245,8 @@
             : 0;
         background(220, 70, 10, constrain(255 - fade, 0, 255));
 
-        // Efecto de fondo estrellado
-        if (frameCount % 30 === 0) {
+        // Reducir frecuencia de generación de estrellas en móviles
+        if (frameCount % (isMobile ? 60 : 30) === 0) {
           particles.push(new Estrella(random(width), random(height)));
         }
 
@@ -320,7 +375,7 @@
           }
         }
 
-        // Renderizar estelas (rastro) del caballo
+        // Renderizar estelas (rastro) del caballo - reducido en móviles
         for (let i = estelas.length - 1; i >= 0; i--) {
           estelas[i].update();
           estelas[i].display();
@@ -444,31 +499,47 @@
           }
         }
 
-        // Crear efecto de estela tras el caballo
-        if (frameCount % 2 == 0) {
+        // Crear efecto de estela tras el caballo - reducido en móviles
+        if (frameCount % (isMobile ? 4 : 2) == 0) {
           estelas.push(new Estela(caballo.pos.x, caballo.pos.y));
         }
 
-        // Crear partículas desde el caballo
-        for (let i = 0; i < 2; i++) {
-          particles.push(
-            new Particula(
-              caballo.pos.x + random(-10, 10),
-              caballo.pos.y + random(-5, 5),
-              false
-            )
-          );
+        // Crear partículas desde el caballo - reducido en móviles
+        if (!isMobile || frameCount % 3 === 0) {
+          // Menos partículas en móviles
+          let numParticulas = isMobile ? 1 : 2;
+          for (let i = 0; i < numParticulas; i++) {
+            particles.push(
+              new Particula(
+                caballo.pos.x + random(-10, 10),
+                caballo.pos.y + random(-5, 5),
+                false
+              )
+            );
+          }
         }
 
         // Actualizar y mostrar caballo
         caballo.update();
         caballo.display();
 
+        // Limitar número máximo de partículas en móviles para mejorar rendimiento
+        const maxParticulas = isMobile ? 50 : 500;
+        if (particles.length > maxParticulas) {
+          particles.splice(0, particles.length - maxParticulas);
+        }
+
         // Actualizar y mostrar partículas
         for (let i = particles.length - 1; i >= 0; i--) {
           particles[i].update();
           particles[i].display();
           if (particles[i].alpha <= 0) particles.splice(i, 1);
+        }
+
+        // Limitar el número de estelas en móviles
+        const maxEstelas = isMobile ? 15 : 50;
+        if (estelas.length > maxEstelas) {
+          estelas.splice(0, estelas.length - maxEstelas);
         }
       }
 
@@ -577,8 +648,8 @@
           noTint();
           pop();
 
-          // Crear partículas temáticas desde el caballo
-          if (frameCount % 3 === 0) {
+          // Crear partículas temáticas desde el caballo - reducido en móviles
+          if (frameCount % (isMobile ? 6 : 3) === 0) {
             // Usar colores del tema actual para las partículas
             let huePart = temaActual.baseHue;
             if (temaActual.nombre === "arcoiris") {
@@ -605,7 +676,7 @@
             random(-2, especial ? -0.5 : -3)
           );
           this.alpha = 100;
-          this.size = random(4, especial ? 15 : 10);
+          this.size = random(4, especial ? 15 : 10) * (isMobile ? 0.8 : 1); // Tamaño reducido en móviles
           this.hue = random(360);
           this.tipo = random(["brillo", "chispa", "polvo"]);
           this.especial = especial; // Para las partículas del mensaje final
@@ -744,6 +815,23 @@
 
       function windowResized() {
         resizeCanvas(windowWidth, windowHeight);
+
+        // Detectar si cambió a móvil o escritorio
+        detectMobile();
+
+        // Reposicionar el input
+        if (isMobile) {
+          input.style("font-size", "18px");
+          input.style("padding", "12px 15px");
+          input.style("width", "80%");
+          input.position(windowWidth / 2 - input.width / 2, 30);
+        } else {
+          input.style("font-size", "16px");
+          input.style("padding", "8px 10px");
+          input.style("width", "");
+          input.position(20, 20);
+        }
+
         actualizarLetras(); // Re-calcular posiciones de letras
       }
 
@@ -763,9 +851,10 @@
         input.value(word);
         actualizarLetras();
 
-        // Reiniciar el fondo
+        // Reiniciar el fondo con cantidad adecuada según dispositivo
         fondoNiebla = [];
-        for (let i = 0; i < 60; i++) fondoNiebla.push(new Niebla());
+        const numNiebla = isMobile ? 20 : 60;
+        for (let i = 0; i < numNiebla; i++) fondoNiebla.push(new Niebla());
 
         console.log(
           `Tema aplicado: ${temaActual.nombre}, Efecto letras: ${efectoLetras}, Efecto caballo: ${efectoCaballo}, Efecto mensaje: ${efectoMensaje}`
