@@ -376,11 +376,11 @@
         // Detectar si es dispositivo móvil
         detectMobile();
 
+        // Ajustar posición de la luna para no tapar el input
+        adjustMoonPosition();
+
         // Configurar volumen de sonidos
         sonidoAparecer.setVolume(0.4);
-        sonidoDesaparecer.setVolume(0.7);
-        sonidoCabalgata.setVolume(0.3); // Volumen más bajo para la cabalgata
-
         // Iniciar audio automáticamente sin requerir interacción del usuario
         initAudioAggressively();
 
@@ -1433,7 +1433,7 @@
         // Detectar si cambió a móvil o escritorio
         detectMobile();
 
-        // Reposicionar el input
+        // Reposicionar el input y asegurar que esté siempre visible
         input.style("z-index", "20");
         if (isMobile) {
           input.style("font-size", "18px");
@@ -1451,6 +1451,9 @@
           input.style("width", "");
           input.position(20, 20);
         }
+
+        // Ajustar posición de la luna para no tapar el input en la nueva resolución
+        adjustMoonPosition();
 
         actualizarLetras(); // Re-calcular posiciones de letras
 
@@ -1526,6 +1529,7 @@
         let totalWidth = texto.length * charWidth;
         push();
         translate(x - totalWidth / 2, y);
+
         for (let i = 0; i < texto.length; i++) {
           let char = texto.charAt(i);
           let xPos = i * charWidth;
@@ -1632,338 +1636,170 @@
         }
       }
 
-      // Asegurarnos de que el DOM esté cargado antes de añadir event listeners
-      document.addEventListener("DOMContentLoaded", function () {
-        // Mejorar el manejo del botón reiniciar en dispositivos móviles
-        const btnReiniciar = document.getElementById("reiniciarBtn");
-        if (btnReiniciar) {
-          btnReiniciar.addEventListener(
-            "touchstart",
-            function (e) {
-              e.preventDefault(); // Prevenir comportamiento predeterminado
-              reiniciar();
-            },
-            { passive: false }
-          );
-        }
+      // Función para crear un flash de pantalla completa
+      function createFullScreenFlash(opacity, duration) {
+        const flashDiv = document.createElement("div");
+        flashDiv.style.position = "fixed";
+        flashDiv.style.top = "0";
+        flashDiv.style.left = "0";
+        flashDiv.style.width = "100%";
+        flashDiv.style.height = "100%";
+        flashDiv.style.backgroundColor = "white";
+        flashDiv.style.opacity = opacity.toString();
+        flashDiv.style.zIndex = "100";
+        flashDiv.style.pointerEvents = "none";
+        document.body.appendChild(flashDiv);
 
-        // Añadir listener para el botón de audio
-        const btnAudio = document.getElementById("audioBtn");
-        if (btnAudio) {
-          btnAudio.addEventListener("click", toggleAudio);
-          btnAudio.addEventListener(
-            "touchstart",
-            function (e) {
-              e.preventDefault();
-              toggleAudio();
-            },
-            { passive: false }
-          );
-        }
-
-        // Iniciar audio después de una interacción del usuario (necesario en algunos navegadores)
-        window.addEventListener(
-          "click",
-          function () {
-            if (!audioContextIniciado) {
-              initAudio();
-            }
-          },
-          { once: true }
-        );
-
-        // Iniciar audio después de cualquier interacción del usuario
-        document.body.addEventListener("click", function () {
-          if (!audioContextIniciado) {
-            initAudio();
-          }
-        });
-
-        document.body.addEventListener("touchstart", function () {
-          if (!audioContextIniciado) {
-            initAudio();
-          }
-        });
-
-        // Agregar interacción especial con la luna
-        const moonContainer = document.querySelector(".moon-container");
-        if (moonContainer) {
-          let clickCount = 0;
-          let lastClickTime = 0;
-
-          moonContainer.addEventListener("click", function (e) {
-            const now = Date.now();
-            // Registrar clics secuenciales rápidos
-            if (now - lastClickTime < 500) {
-              clickCount++;
-            } else {
-              clickCount = 1;
-            }
-            lastClickTime = now;
-
-            createClickEffect(e.clientX, e.clientY);
-
-            // Diferentes efectos según el número de clics
-            if (clickCount >= 3) {
-              // Triple clic: efecto explosivo con muchas partículas
-              for (let i = 0; i < 50; i++) {
-                particles.push(new Particula(e.clientX, e.clientY, true));
-              }
-              // Reproducir todos los sonidos de pirotecnia juntos con bajo volumen
-              if (audioHabilitado && audioIniciado) {
-                for (let i = 0; i < sonidosFirework.length; i++) {
-                  try {
-                    sonidosFirework[i].setVolume(0.3);
-                    sonidosFirework[i].play();
-                  } catch (e) {
-                    console.error(`Error reproduciendo firework_${i + 1}:`, e);
-                  }
-                }
-              }
-              clickCount = 0;
-            } else if (clickCount === 2) {
-              // Doble clic: cambiar tema y hacer flash más intenso
-              temaActual = random(temasVisuales);
-              console.log(`Nuevo tema por doble clic: ${temaActual.nombre}`);
-
-              // Flash más intenso
-              const flashDiv = document.createElement("div");
-              flashDiv.style.position = "fixed";
-              flashDiv.style.top = "0";
-              flashDiv.style.left = "0";
-              flashDiv.style.width = "100%";
-              flashDiv.style.height = "100%";
-              flashDiv.style.backgroundColor = "white";
-              flashDiv.style.opacity = "0.9";
-              flashDiv.style.zIndex = "100";
-              flashDiv.style.pointerEvents = "none";
-              document.body.appendChild(flashDiv);
-
-              setTimeout(() => {
-                flashDiv.style.transition = "opacity 0.8s ease-out";
-                flashDiv.style.opacity = "0";
-                setTimeout(() => {
-                  document.body.removeChild(flashDiv);
-                }, 800);
-              }, 80);
-            } else {
-              // Clic simple: cambiar tema con efecto normal
-              temaActual = random(temasVisuales);
-              console.log(`Nuevo tema: ${temaActual.nombre}`);
-
-              // Efecto de luz moderado
-              const flashDiv = document.createElement("div");
-              flashDiv.style.position = "fixed";
-              flashDiv.style.top = "0";
-              flashDiv.style.left = "0";
-              flashDiv.style.width = "100%";
-              flashDiv.style.height = "100%";
-              flashDiv.style.backgroundColor = "white";
-              flashDiv.style.opacity = "0.7";
-              flashDiv.style.zIndex = "100";
-              flashDiv.style.pointerEvents = "none";
-              document.body.appendChild(flashDiv);
-
-              setTimeout(() => {
-                flashDiv.style.transition = "opacity 0.5s ease-out";
-                flashDiv.style.opacity = "0";
-                setTimeout(() => {
-                  document.body.removeChild(flashDiv);
-                }, 500);
-              }, 50);
-            }
-
-            // Cambiar también el efecto del "Powered by" al hacer clic en la luna
-            currentPoweredEffect =
-              (currentPoweredEffect + 1) % poweredByEffects.length;
-            updatePoweredByEffect();
-
-            // Efectos adicionales en la luna misma
-            moonContainer.style.transition =
-              "transform 0.5s ease-out, filter 0.5s ease-out";
-            moonContainer.style.transform = `scale(${1 + clickCount * 0.1})`;
-
-            // Color aleatorio en las nubes según el tema
-            const nubes = moonContainer.querySelector(".clouds");
-            if (nubes) {
-              nubes.style.transition = "filter 0.5s ease-out";
-              let hue = temaActual.baseHue;
-              if (temaActual.nombre === "arcoiris") {
-                hue = Math.floor(Math.random() * 360);
-              }
-              nubes.style.filter = `hue-rotate(${hue}deg) saturate(${
-                temaActual.satMin / 50 + 1
-              })`;
-            }
-
-            // Volver a la normalidad después de un tiempo
-            setTimeout(() => {
-              moonContainer.style.transform = "";
-              if (nubes) {
-                nubes.style.filter = "";
-              }
-            }, 1500);
-          });
-
-          // Mismo manejo para eventos touch
-          moonContainer.addEventListener("touchstart", function (e) {
-            e.preventDefault();
-            const now = Date.now();
-            if (now - lastClickTime < 500) {
-              clickCount++;
-            } else {
-              clickCount = 1;
-            }
-            lastClickTime = now;
-
-            createClickEffect(e.touches[0].clientX, e.touches[0].clientY);
-
-            // Aplicar los mismos efectos que en el clic normal
-            if (clickCount >= 3) {
-              for (let i = 0; i < 50; i++) {
-                particles.push(
-                  new Particula(
-                    e.touches[0].clientX,
-                    e.touches[0].clientY,
-                    true
-                  )
-                );
-              }
-              if (audioHabilitado && audioIniciado) {
-                for (let i = 0; i < sonidosFirework.length; i++) {
-                  try {
-                    sonidosFirework[i].setVolume(0.3);
-                    sonidosFirework[i].play();
-                  } catch (e) {}
-                }
-              }
-              clickCount = 0;
-            }
-
-            temaActual = random(temasVisuales);
-
-            // Cambiar también el efecto del "Powered by"
-            currentPoweredEffect =
-              (currentPoweredEffect + 1) % poweredByEffects.length;
-            updatePoweredByEffect();
-
-            // Efectos visuales en la luna
-            const nubes = moonContainer.querySelector(".clouds");
-            if (nubes) {
-              nubes.style.transition = "filter 0.5s ease-out";
-              let hue = temaActual.baseHue;
-              if (temaActual.nombre === "arcoiris") {
-                hue = Math.floor(Math.random() * 360);
-              }
-              nubes.style.filter = `hue-rotate(${hue}deg) saturate(${
-                temaActual.satMin / 50 + 1
-              })`;
-            }
-
-            setTimeout(() => {
-              if (nubes) {
-                nubes.style.filter = "";
-              }
-            }, 1500);
-          });
-        }
-
-        // Iniciar audio después de CUALQUIER interacción del usuario con múltiples eventos
-        const iniciarAudio = function () {
-          if (!audioContextIniciado) {
-            console.log("Iniciando audio por interacción del usuario");
-            initAudio();
-          } else {
-            // Intentar reproducir audio directamente
-            if (audioHabilitado) {
-              setTimeout(() => {
-                // Intentar reproducir y detener todos los sonidos para forzar decodificación
-                try {
-                  sonidoAparecer.play();
-                  sonidoAparecer.stop();
-                  sonidoDesaparecer.play();
-                  sonidoDesaparecer.stop();
-                  sonidoCabalgata.play();
-                  sonidoCabalgata.stop();
-                } catch (e) {
-                  console.error("Error reproduciendo sonidos:", e);
-                }
-              }, 100);
-            }
-          }
-        };
-
-        // Aplicar el iniciador de audio a múltiples eventos
-        window.addEventListener("click", iniciarAudio, { once: true });
-        window.addEventListener("touchstart", iniciarAudio, { once: true });
-        window.addEventListener("keydown", iniciarAudio, { once: true });
-        window.addEventListener("mousedown", iniciarAudio, { once: true });
-
-        // Iniciar audio al cargar la página, sin esperar interacción
-        window.addEventListener("load", function () {
+        // Fadeout del flash
+        setTimeout(() => {
+          flashDiv.style.transition = `opacity ${duration / 2}ms ease-out`;
+          flashDiv.style.opacity = "0";
           setTimeout(() => {
-            initAudioAggressively();
-            // Intentar iniciar el audio varias veces con intervalos
-            let initAttempts = 0;
-            let initInterval = setInterval(() => {
-              initAttempts++;
-              if (audioContextIniciado || initAttempts > 5) {
-                clearInterval(initInterval);
-                // Forzar audioIniciado para que la animación funcione aunque falle el audio
-                audioIniciado = true;
-              } else {
-                initAudioAggressively();
-              }
-            }, 1000);
+            if (document.body.contains(flashDiv)) {
+              document.body.removeChild(flashDiv);
+            }
+          }, duration / 2);
+        }, duration / 2);
+      }
 
-            // Añadir temporizador de seguridad adicional
-            setTimeout(initAnimationSafety, 3000);
-          }, 500);
-        });
+      // Función para aplicar efectos visuales a la luna
+      function applyMoonEffects(moonContainer, clickCount) {
+        moonContainer.style.transition =
+          "transform 0.5s ease-out, filter 0.5s ease-out";
+        moonContainer.style.transform = `scale(${1 + clickCount * 0.1})`;
 
-        // Añadir detector de actividad para asegurar continuidad
-        let lastActivity = Date.now();
-
-        function checkActivity() {
-          const now = Date.now();
-          // Si ha pasado más de 5 segundos sin actividad y la animación parece estar parada
-          if (
-            now - lastActivity > 5000 &&
-            caballo &&
-            !letrasMostradas &&
-            caballo.pos.x < width / 4
-          ) {
-            console.log("Reiniciando animación por inactividad");
-            // Mover caballo para forzar animación
-            caballo.pos.x = width / 4 + 5;
-            lastActivity = now;
+        // Color aleatorio en las nubes según el tema
+        const nubes = moonContainer.querySelector(".clouds");
+        if (nubes) {
+          nubes.style.transition = "filter 0.5s ease-out";
+          let hue = temaActual.baseHue;
+          if (temaActual.nombre === "arcoiris") {
+            hue = Math.floor(Math.random() * 360);
           }
+          nubes.style.filter = `hue-rotate(${hue}deg) saturate(${
+            temaActual.satMin / 50 + 1
+          })`;
         }
 
-        // Verificar actividad cada 2 segundos
-        setInterval(checkActivity, 2000);
+        // Volver a la normalidad después de un tiempo
+        setTimeout(() => {
+          moonContainer.style.transform = "";
+          if (nubes) {
+            nubes.style.filter = "";
+          }
+        }, 1500);
+      }
 
-        // Actualizar timestamp en eventos de usuario
-        window.addEventListener("click", () => {
-          lastActivity = Date.now();
-        });
-        window.addEventListener("mousemove", () => {
-          lastActivity = Date.now();
-        });
-        window.addEventListener("keydown", () => {
-          lastActivity = Date.now();
-        });
-        window.addEventListener("touchstart", () => {
-          lastActivity = Date.now();
-        });
+      // Nueva función para configurar la interacción con la luna
+      function setupMoonInteraction() {
+        const moonContainer = document.querySelector(".moon-container");
+        if (!moonContainer) return;
 
-        // Añadir verificador periódico del estado de la animación para dispositivos móviles
-        if (isMobile) {
-          setInterval(checkAnimationState, 3000);
+        let clickCount = 0;
+        let lastClickTime = 0;
+
+        // Eliminar controladores de eventos existentes para evitar duplicados
+        moonContainer.removeEventListener("click", handleMoonClick);
+        moonContainer.removeEventListener("touchstart", handleMoonTouch);
+
+        // Definir los manejadores de eventos externos para poder eliminarlos
+        function handleMoonClick(e) {
+          console.log("Luna clickeada (mouse)");
+          processMoonInteraction(e.clientX, e.clientY);
         }
 
-        // Inicializar el efecto del "Powered by"
-        updatePoweredByEffect();
+        function handleMoonTouch(e) {
+          console.log("Luna tocada (touch)");
+          e.preventDefault();
+          // Capturar las coordenadas del primer toque
+          if (e.touches && e.touches.length > 0) {
+            processMoonInteraction(e.touches[0].clientX, e.touches[0].clientY);
+          }
+          return false;
+        }
+
+        // Procesamiento común para clics y toques
+        function processMoonInteraction(x, y) {
+          const now = Date.now();
+          if (now - lastClickTime < 500) {
+            clickCount++;
+          } else {
+            clickCount = 1;
+          }
+          lastClickTime = now;
+
+          // Crear efecto visual en el punto de interacción
+          createClickEffect(x, y);
+
+          // Diferentes efectos según el número de clics/toques
+          if (clickCount >= 3) {
+            // Triple clic: efecto explosivo con muchas partículas
+            for (let i = 0; i < 50; i++) {
+              particles.push(new Particula(x, y, true));
+            }
+            // Reproducir todos los sonidos de pirotecnia juntos con bajo volumen
+            if (audioHabilitado && audioIniciado) {
+              for (let i = 0; i < sonidosFirework.length; i++) {
+                try {
+                  sonidosFirework[i].setVolume(0.3);
+                  sonidosFirework[i].play();
+                } catch (e) {
+                  console.error(`Error reproduciendo firework_${i + 1}:`, e);
+                }
+              }
+            }
+            clickCount = 0;
+            createFullScreenFlash(0.95, 1000);
+            // Flash intenso para triple click/toque
+          } else if (clickCount === 2) {
+            // Doble clic: cambiar tema y hacer flash más intenso
+            temaActual = random(temasVisuales);
+            console.log(
+              `Nuevo tema por doble interacción: ${temaActual.nombre}`
+            );
+            createFullScreenFlash(0.8, 700);
+          } else {
+            // Clic simple: cambiar tema con efecto normal
+            temaActual = random(temasVisuales);
+            console.log(
+              `Nuevo tema por interacción simple: ${temaActual.nombre}`
+            );
+            createFullScreenFlash(0.6, 500);
+          }
+
+          // Cambiar también el efecto del "Powered by"
+          currentPoweredEffect =
+            (currentPoweredEffect + 1) % poweredByEffects.length;
+          updatePoweredByEffect();
+
+          // Efectos adicionales en la luna misma
+          applyMoonEffects(moonContainer, clickCount);
+        }
+
+        // Agregar los controladores de eventos
+        moonContainer.addEventListener("click", handleMoonClick);
+        moonContainer.addEventListener("touchstart", handleMoonTouch, {
+          passive: false,
+        });
+
+        // También agregar touchend para mejorar la respuesta en dispositivos táctiles
+        moonContainer.addEventListener(
+          "touchend",
+          function (e) {
+            console.log("Touch end en luna");
+            e.preventDefault();
+          },
+          { passive: false }
+        );
+      }
+
+      // Asegurar que se apliquen los efectos de la luna en el primer cargado
+      window.addEventListener("load", function () {
+        // Ajustar posición inicial de la luna
+        setTimeout(adjustMoonPosition, 100);
+
+        // Configurar interacción con la luna después de que todo esté cargado
+        setTimeout(setupMoonInteraction, 500);
       });
 
       function initAudio() {
@@ -2087,12 +1923,334 @@
           }
         }
       }
+
+      // Nueva función para ajustar la posición de la luna según el tamaño de pantalla
+      function adjustMoonPosition() {
+        const moonContainer = document.querySelector(".moon-container");
+        if (moonContainer) {
+          // En móviles, asegurar que la luna esté posicionada correctamente
+          if (isMobile) {
+            if (windowWidth < 380) {
+              moonContainer.style.top = "100px";
+              moonContainer.style.right = "10px";
+              moonContainer.style.width = "120px";
+              moonContainer.style.height = "120px";
+            } else {
+              moonContainer.style.top = "80px";
+              moonContainer.style.right = "10px";
+              moonContainer.style.width = "150px";
+              moonContainer.style.height = "150px";
+            }
+          } else {
+            moonContainer.style.top = "20px";
+            moonContainer.style.right = "20px";
+            moonContainer.style.width = "180px";
+            moonContainer.style.height = "180px";
+          }
+        }
+      }
+
+      // Asegurarnos de que el DOM esté cargado antes de añadir event listeners
+      document.addEventListener("DOMContentLoaded", function () {
+        // Mejorar el manejo del botón reiniciar en dispositivos móviles
+        const btnReiniciar = document.getElementById("reiniciarBtn");
+        if (btnReiniciar) {
+          btnReiniciar.addEventListener(
+            "touchstart",
+            function (e) {
+              e.preventDefault(); // Prevenir comportamiento predeterminado
+              reiniciar();
+            },
+            { passive: false }
+          );
+        }
+
+        // Añadir listener para el botón de audio
+        const btnAudio = document.getElementById("audioBtn");
+        if (btnAudio) {
+          btnAudio.addEventListener("click", toggleAudio);
+          btnAudio.addEventListener(
+            "touchstart",
+            function (e) {
+              e.preventDefault();
+              toggleAudio();
+            },
+            { passive: false }
+          );
+        }
+
+        // Iniciar audio después de una interacción del usuario (necesario en algunos navegadores)
+        window.addEventListener(
+          "click",
+          function () {
+            if (!audioContextIniciado) {
+              initAudio();
+            }
+          },
+          { once: true }
+        );
+
+        // Iniciar audio después de cualquier interacción del usuario
+        document.body.addEventListener("click", function () {
+          if (!audioContextIniciado) {
+            initAudio();
+          }
+        });
+        document.body.addEventListener("touchstart", function () {
+          if (!audioContextIniciado) {
+            initAudio();
+          }
+        });
+
+        // Agregar interacción especial con la luna
+        const moonContainer = document.querySelector(".moon-container");
+        if (moonContainer) {
+          let clickCount = 0;
+          let lastClickTime = 0;
+
+          moonContainer.addEventListener("click", function (e) {
+            const now = Date.now();
+            // Registrar clics secuenciales rápidos
+            if (now - lastClickTime < 500) {
+              clickCount++;
+            } else {
+              clickCount = 1;
+            }
+            lastClickTime = now;
+            createClickEffect(e.clientX, e.clientY);
+            // Diferentes efectos según el número de clics
+            if (clickCount >= 3) {
+              // Triple clic: efecto explosivo con muchas partículas
+              for (let i = 0; i < 50; i++) {
+                particles.push(new Particula(e.clientX, e.clientY, true));
+              }
+              // Reproducir todos los sonidos de pirotecnia juntos con bajo volumen
+              if (audioHabilitado && audioIniciado) {
+                for (let i = 0; i < sonidosFirework.length; i++) {
+                  try {
+                    sonidosFirework[i].setVolume(0.3);
+                    sonidosFirework[i].play();
+                  } catch (e) {
+                    console.error(`Error reproduciendo firework_${i + 1}:`, e);
+                  }
+                }
+              }
+              clickCount = 0;
+            } else if (clickCount === 2) {
+              // Doble clic: cambiar tema y hacer flash más intenso
+              temaActual = random(temasVisuales);
+              console.log(`Nuevo tema por doble clic: ${temaActual.nombre}`);
+              createFullScreenFlash(0.8, 700);
+            } else {
+              // Clic simple: cambiar tema con efecto normal
+              temaActual = random(temasVisuales);
+              console.log(`Nuevo tema: ${temaActual.nombre}`);
+              createFullScreenFlash(0.6, 500);
+            }
+
+            // Cambiar también el efecto del "Powered by" al hacer clic en la luna
+            currentPoweredEffect =
+              (currentPoweredEffect + 1) % poweredByEffects.length;
+            updatePoweredByEffect();
+
+            // Efectos adicionales en la luna misma
+            moonContainer.style.transition =
+              "transform 0.5s ease-out, filter 0.5s ease-out";
+            moonContainer.style.transform = `scale(${1 + clickCount * 0.1})`;
+
+            // Color aleatorio en las nubes según el tema
+            const nubes = moonContainer.querySelector(".clouds");
+            if (nubes) {
+              nubes.style.transition = "filter 0.5s ease-out";
+              let hue = temaActual.baseHue;
+              if (temaActual.nombre === "arcoiris") {
+                hue = Math.floor(Math.random() * 360);
+              }
+              nubes.style.filter = `hue-rotate(${hue}deg) saturate(${
+                temaActual.satMin / 50 + 1
+              })`;
+            }
+
+            // Volver a la normalidad después de un tiempo
+            setTimeout(() => {
+              moonContainer.style.transform = "";
+              if (nubes) {
+                nubes.style.filter = "";
+              }
+            }, 1500);
+          });
+
+          // Mismo manejo para eventos touch
+          moonContainer.addEventListener("touchstart", function (e) {
+            e.preventDefault();
+            const now = Date.now();
+            if (now - lastClickTime < 500) {
+              clickCount++;
+            } else {
+              clickCount = 1;
+            }
+            lastClickTime = now;
+            createClickEffect(e.touches[0].clientX, e.touches[0].clientY);
+            // Aplicar los mismos efectos que en el clic normal
+            if (clickCount >= 3) {
+              for (let i = 0; i < 50; i++) {
+                particles.push(
+                  new Particula(
+                    e.touches[0].clientX,
+                    e.touches[0].clientY,
+                    true
+                  )
+                );
+              }
+              if (audioHabilitado && audioIniciado) {
+                for (let i = 0; i < sonidosFirework.length; i++) {
+                  try {
+                    sonidosFirework[i].setVolume(0.3);
+                    sonidosFirework[i].play();
+                  } catch (e) {}
+                }
+              }
+              clickCount = 0;
+            } else if (clickCount === 2) {
+              temaActual = random(temasVisuales);
+              console.log(
+                `Nuevo tema por doble interacción: ${temaActual.nombre}`
+              );
+              createFullScreenFlash(0.8, 700);
+            } else {
+              temaActual = random(temasVisuales);
+              console.log(
+                `Nuevo tema por interacción simple: ${temaActual.nombre}`
+              );
+              createFullScreenFlash(0.6, 500);
+            }
+
+            // Cambiar también el efecto del "Powered by"
+            currentPoweredEffect =
+              (currentPoweredEffect + 1) % poweredByEffects.length;
+            updatePoweredByEffect();
+
+            // Efectos visuales en la luna
+            const nubes = moonContainer.querySelector(".clouds");
+            if (nubes) {
+              nubes.style.transition = "filter 0.5s ease-out";
+              let hue = temaActual.baseHue;
+              if (temaActual.nombre === "arcoiris") {
+                hue = Math.floor(Math.random() * 360);
+              }
+              nubes.style.filter = `hue-rotate(${hue}deg) saturate(${
+                temaActual.satMin / 50 + 1
+              })`;
+            }
+            setTimeout(() => {
+              if (nubes) {
+                nubes.style.filter = "";
+              }
+            }, 1500);
+          });
+        }
+
+        // Iniciar audio después de CUALQUIER interacción del usuario con múltiples eventos
+        const iniciarAudio = function () {
+          if (!audioContextIniciado) {
+            console.log("Iniciando audio por interacción del usuario");
+            initAudio();
+          } else {
+            // Intentar reproducir audio directamente
+            if (audioHabilitado) {
+              setTimeout(() => {
+                // Intentar reproducir y detener todos los sonidos para forzar decodificación
+                try {
+                  sonidoAparecer.play();
+                  sonidoAparecer.stop();
+                  sonidoDesaparecer.play();
+                  sonidoDesaparecer.stop();
+                  sonidoCabalgata.play();
+                  sonidoCabalgata.stop();
+                } catch (e) {
+                  console.error("Error reproduciendo sonidos:", e);
+                }
+              }, 100);
+            }
+          }
+        };
+
+        // Aplicar el iniciador de audio a múltiples eventos
+        window.addEventListener("click", iniciarAudio, { once: true });
+        window.addEventListener("touchstart", iniciarAudio, { once: true });
+        window.addEventListener("keydown", iniciarAudio, { once: true });
+        window.addEventListener("mousedown", iniciarAudio, { once: true });
+
+        // Iniciar audio al cargar la página, sin esperar interacción
+        window.addEventListener("load", function () {
+          setTimeout(() => {
+            initAudioAggressively();
+            // Intentar iniciar el audio varias veces con intervalos
+            let initAttempts = 0;
+            let initInterval = setInterval(() => {
+              initAttempts++;
+              if (audioContextIniciado || initAttempts > 5) {
+                clearInterval(initInterval);
+                // Forzar audioIniciado para que la animación funcione aunque falle el audio
+                audioIniciado = true;
+              } else {
+                initAudioAggressively();
+              }
+            }, 1000);
+            // Añadir temporizador de seguridad adicional
+            setTimeout(initAnimationSafety, 3000);
+          }, 500);
+        });
+
+        // Añadir detector de actividad para asegurar continuidad
+        let lastActivity = Date.now();
+        function checkActivity() {
+          const now = Date.now();
+          // Si ha pasado más de 5 segundos sin actividad y la animación parece estar parada
+          if (
+            now - lastActivity > 5000 &&
+            caballo &&
+            !letrasMostradas &&
+            caballo.pos.x < width / 4
+          ) {
+            console.log("Reiniciando animación por inactividad");
+            // Mover caballo para forzar animación
+            caballo.pos.x = width / 4 + 5;
+            lastActivity = now;
+          }
+        }
+
+        // Verificar actividad cada 2 segundos
+        setInterval(checkActivity, 2000);
+
+        // Actualizar timestamp en eventos de usuario
+        window.addEventListener("click", () => {
+          lastActivity = Date.now();
+        });
+        window.addEventListener("mousemove", () => {
+          lastActivity = Date.now();
+        });
+        window.addEventListener("keydown", () => {
+          lastActivity = Date.now();
+        });
+        window.addEventListener("touchstart", () => {
+          lastActivity = Date.now();
+        });
+
+        // Añadir verificador periódico del estado de la animación para dispositivos móviles
+        if (isMobile) {
+          setInterval(checkAnimationState, 3000);
+        }
+
+        // Inicializar el efecto del "Powered by"
+        updatePoweredByEffect();
+      });
     </script>
 
     <!-- Contenedor para los botones que evita superposición -->
     <div class="button-container">
-      <button id="audioBtn">🔊 Sonido ON</button>
       <button id="reiniciarBtn" onclick="reiniciar()">🔄 Reiniciar</button>
+      <button id="audioBtn">🔊 Sonido ON</button>
     </div>
   </body>
 </html>
