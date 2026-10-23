@@ -84,6 +84,23 @@
       </div>
     </div>
 
+    <!-- Panel Modal de Música Melancólica -->
+    <div id="musicModal" class="music-modal glass-panel">
+      <div class="modal-header">
+        <h3>🎵 Música Melancólica</h3>
+        <button id="closeMusicModal" class="close-modal-btn">&times;</button>
+      </div>
+      <p class="modal-description">
+        Elige una melodía nostálgica o disfruta la noche mágica en silencio:
+      </p>
+      <div id="musicList" class="music-list"></div>
+      <div class="music-volume-box">
+        <span class="music-vol-icon">🔉</span>
+        <input type="range" id="musicVolumeSlider" min="0" max="100" value="50" class="music-slider" aria-label="Volumen de música" />
+        <span id="musicVolumeVal" class="music-vol-label">50%</span>
+      </div>
+    </div>
+
     <!-- Barra de Herramientas Inferior Flotante (Dock) -->
     <nav class="dock-container glass-panel" aria-label="Controles principales">
       <button id="figureBtn" class="dock-btn" title="Seleccionar figura mágica">
@@ -96,7 +113,15 @@
         <span class="label">Temas</span>
       </button>
 
-      <button id="audioBtn" class="dock-btn active" title="Activar/Silenciar sonido">
+      <button id="musicBtn" class="dock-btn active" title="Seleccionar música de fondo">
+        <span class="music-btn-icon">🎵</span>
+        <span class="label">Música</span>
+        <span class="eq-bars" id="musicEqBars">
+          <i class="bar"></i><i class="bar"></i><i class="bar"></i>
+        </span>
+      </button>
+
+      <button id="audioBtn" class="dock-btn active" title="Activar/Silenciar efectos de sonido">
         <span>🔊</span>
         <span class="label">Sonido ON</span>
       </button>
@@ -127,6 +152,7 @@
 
     <!-- Módulos JavaScript -->
     <script src="js/config.js"></script>
+    <script src="js/music.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/effects/Particles.js"></script>
     <script src="js/effects/Fireworks.js"></script>

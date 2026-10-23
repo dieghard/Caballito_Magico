@@ -219,6 +219,12 @@ const AppState = {
         const foundFig = CONFIG.figures.find(f => f.id.toLowerCase() === figureParam.toLowerCase() || f.name.toLowerCase() === figureParam.toLowerCase());
         if (foundFig) this.currentFigure = foundFig.id;
       }
+
+      const musicParam = urlParams.get('musica') || urlParams.get('music');
+      if (musicParam && typeof MusicPlayer !== 'undefined') {
+        const foundTrack = MusicPlayer.tracks.find(t => t.id.toLowerCase() === musicParam.toLowerCase() || t.name.toLowerCase() === musicParam.toLowerCase());
+        if (foundTrack) MusicPlayer.currentTrackId = foundTrack.id;
+      }
     } catch (e) {
       console.warn("Error leyendo URL params:", e);
     }

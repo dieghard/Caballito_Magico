@@ -69,6 +69,12 @@ const AudioManager = {
   init() {
     const unlockAudio = () => {
       this.resumeContext();
+      if (window.MusicPlayer) {
+        MusicPlayer.ensureAudioContext();
+        if (MusicPlayer.currentTrackId !== "silencio" && MusicPlayer.userEnabled) {
+          MusicPlayer.start();
+        }
+      }
       window.removeEventListener('click', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
       window.removeEventListener('keydown', unlockAudio);
@@ -77,6 +83,10 @@ const AudioManager = {
     window.addEventListener('click', unlockAudio);
     window.addEventListener('touchstart', unlockAudio);
     window.addEventListener('keydown', unlockAudio);
+
+    if (window.MusicPlayer && typeof window.MusicPlayer.init === "function") {
+      window.MusicPlayer.init();
+    }
   },
   
   resumeContext() {
@@ -87,6 +97,9 @@ const AudioManager = {
           ctx.resume().then(() => {
             this.contextResumed = true;
             this.isReady = true;
+            if (window.MusicPlayer && MusicPlayer.isPlaying) {
+              MusicPlayer.ensureAudioContext();
+            }
           }).catch(() => {});
         } else {
           this.contextResumed = true;
@@ -100,8 +113,10 @@ const AudioManager = {
     this.enabled = !this.enabled;
     if (this.enabled) {
       this.resumeContext();
+      if (window.MusicPlayer) MusicPlayer.toggleAudioMaster(true);
     } else {
       this.stopAll();
+      if (window.MusicPlayer) MusicPlayer.toggleAudioMaster(false);
     }
     return this.enabled;
   },

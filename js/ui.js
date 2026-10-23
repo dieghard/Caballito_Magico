@@ -15,8 +15,10 @@ const UI = {
     this.bindEvents();
     this.renderThemeCards();
     this.renderFigureCards();
+    this.renderMusicCards();
     this.updateThemeBadge();
     this.applyThemeToElements();
+    this.updateMusicUI();
     this.startPoweredByCycle();
   },
 
@@ -33,6 +35,13 @@ const UI = {
       figureModal: document.getElementById("figureModal"),
       figureGrid: document.getElementById("figureGrid"),
       closeFigureModal: document.getElementById("closeFigureModal"),
+      musicModal: document.getElementById("musicModal"),
+      musicList: document.getElementById("musicList"),
+      closeMusicModal: document.getElementById("closeMusicModal"),
+      musicBtn: document.getElementById("musicBtn"),
+      musicEqBars: document.getElementById("musicEqBars"),
+      musicVolumeSlider: document.getElementById("musicVolumeSlider"),
+      musicVolumeVal: document.getElementById("musicVolumeVal"),
       shareModal: document.getElementById("shareModal"),
       closeShareModal: document.getElementById("closeShareModal"),
       shareUrlInput: document.getElementById("shareUrlInput"),
@@ -100,7 +109,25 @@ const UI = {
       el.closeFigureModal.addEventListener("click", () => this.closeFigureModal());
     }
 
-    // Botón de Audio
+    // Botón de Música Melancólica
+    if (el.musicBtn) {
+      el.musicBtn.addEventListener("click", () => this.toggleMusicModal());
+    }
+    if (el.closeMusicModal) {
+      el.closeMusicModal.addEventListener("click", () => this.closeMusicModal());
+    }
+    if (el.musicVolumeSlider) {
+      const initialVol = typeof MusicPlayer !== "undefined" ? Math.round(MusicPlayer.volume * 100) : 50;
+      el.musicVolumeSlider.value = initialVol;
+      if (el.musicVolumeVal) el.musicVolumeVal.textContent = `${initialVol}%`;
+      el.musicVolumeSlider.addEventListener("input", (e) => {
+        const val = parseInt(e.target.value, 10);
+        if (el.musicVolumeVal) el.musicVolumeVal.textContent = `${val}%`;
+        if (typeof MusicPlayer !== "undefined") MusicPlayer.setVolume(val / 100);
+      });
+    }
+
+    // Botón de Audio General (Efectos)
     if (el.audioBtn) {
       el.audioBtn.addEventListener("click", () => {
         const isEnabled = AudioManager.toggleAudio();
@@ -158,6 +185,10 @@ const UI = {
       if (el.figureModal && el.figureModal.classList.contains("visible") &&
           !el.figureModal.contains(e.target) && !el.figureBtn.contains(e.target)) {
         this.closeFigureModal();
+      }
+      if (el.musicModal && el.musicModal.classList.contains("visible") &&
+          !el.musicModal.contains(e.target) && !el.musicBtn.contains(e.target)) {
+        this.closeMusicModal();
       }
       if (el.shareModal && el.shareModal.classList.contains("visible") &&
           !el.shareModal.contains(e.target) && !el.shareBtn.contains(e.target)) {
@@ -278,6 +309,7 @@ const UI = {
   toggleThemeModal() {
     if (!this.elements.themeModal) return;
     this.closeFigureModal();
+    this.closeMusicModal();
     this.closeShareModal();
     const isVis = this.elements.themeModal.classList.toggle("visible");
     if (isVis) {
@@ -294,6 +326,7 @@ const UI = {
   toggleFigureModal() {
     if (!this.elements.figureModal) return;
     this.closeThemeModal();
+    this.closeMusicModal();
     this.closeShareModal();
     const isVis = this.elements.figureModal.classList.toggle("visible");
     if (isVis) {
@@ -307,14 +340,116 @@ const UI = {
     }
   },
 
+  toggleMusicModal() {
+    if (!this.elements.musicModal) return;
+    this.closeThemeModal();
+    this.closeFigureModal();
+    this.closeShareModal();
+    const isVis = this.elements.musicModal.classList.toggle("visible");
+    if (isVis) {
+      this.renderMusicCards();
+      if (this.elements.musicVolumeSlider && typeof MusicPlayer !== "undefined") {
+        const v = Math.round(MusicPlayer.volume * 100);
+        this.elements.musicVolumeSlider.value = v;
+        if (this.elements.musicVolumeVal) this.elements.musicVolumeVal.textContent = `${v}%`;
+      }
+    }
+  },
+
+  closeMusicModal() {
+    if (this.elements.musicModal) {
+      this.elements.musicModal.classList.remove("visible");
+    }
+  },
+
+  renderMusicCards() {
+    const list = this.elements.musicList;
+    if (!list || typeof MusicPlayer === "undefined") return;
+    list.innerHTML = "";
+
+    MusicPlayer.tracks.forEach((track) => {
+      const card = document.createElement("div");
+      card.className = "music-card";
+      if (track.id === MusicPlayer.currentTrackId) {
+        card.classList.add("active");
+      }
+
+      card.innerHTML = `
+        <span class="music-card-icon">${track.icon}</span>
+        <div class="music-card-info">
+          <div class="music-card-header">
+            <strong>${track.name}</strong>
+            <span class="music-style-badge">${track.style}</span>
+          </div>
+          <small>${track.description}</small>
+        </div>
+        <span class="music-status-dot"></span>
+      `;
+
+      card.addEventListener("click", () => {
+        MusicPlayer.setTrack(track.id);
+        this.updateMusicUI();
+        if (track.id === "silencio") {
+          this.showToast("Música: En silencio 🔇");
+        } else {
+          this.showToast(`Música: ${track.icon} ${track.name} ✨`);
+        }
+      });
+
+      list.appendChild(card);
+    });
+  },
+
+  updateMusicUI() {
+    if (typeof MusicPlayer === "undefined") return;
+    const cur = MusicPlayer.getCurrentTrack();
+    const isSilencio = MusicPlayer.currentTrackId === "silencio";
+    const isPlaying = MusicPlayer.isPlaying && !isSilencio;
+
+    // Actualizar tarjetas en el modal
+    if (this.elements.musicList) {
+      const cards = this.elements.musicList.querySelectorAll(".music-card");
+      cards.forEach((c, idx) => {
+        const track = MusicPlayer.tracks[idx];
+        if (track) {
+          c.classList.toggle("active", track.id === MusicPlayer.currentTrackId);
+        }
+      });
+    }
+
+    // Actualizar botón del Dock
+    const btn = this.elements.musicBtn;
+    if (btn) {
+      const iconEl = btn.querySelector(".music-btn-icon");
+      const labelEl = btn.querySelector(".label");
+      const eqEl = this.elements.musicEqBars;
+
+      if (isSilencio) {
+        btn.classList.remove("active");
+        if (iconEl) iconEl.textContent = "🔇";
+        if (labelEl) labelEl.textContent = "Silencio";
+        if (eqEl) eqEl.classList.remove("playing");
+      } else {
+        btn.classList.add("active");
+        if (iconEl) iconEl.textContent = cur.icon;
+        if (labelEl) labelEl.textContent = cur.name;
+        if (eqEl) eqEl.classList.toggle("playing", isPlaying);
+      }
+    }
+  },
+
   openShareModal() {
     if (!this.elements.shareModal || !this.elements.shareUrlInput) return;
     this.closeThemeModal();
     this.closeFigureModal();
+    this.closeMusicModal();
     const url = new URL(window.location.href);
     url.searchParams.set("texto", AppState.word);
     url.searchParams.set("tema", AppState.currentTheme.id);
     url.searchParams.set("figura", AppState.currentFigure);
+    if (typeof MusicPlayer !== "undefined") {
+      url.searchParams.set("musica", MusicPlayer.currentTrackId);
+    }
     this.elements.shareUrlInput.value = url.toString();
     this.elements.shareModal.classList.add("visible");
   },
