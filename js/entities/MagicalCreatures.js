@@ -1,6 +1,12 @@
 /**
  * Sistema de Figuras y Criaturas Mágicas para Caballito Mágico
- * Incluye: Caballo Mejorado, Pegaso Alado, Unicornio Estelar, Dragón Cósmico, Fénix de Fuego y Cometa Estelar.
+ * Cada criatura cuenta con su spritesheet animado de alta calidad:
+ * - Caballo Mágico: caballito.png (128x128)
+ * - Dragón Cósmico: dragon_sheet.png (191x161, vuelo nativo derecha Row 1 e izquierda Row 3 con aliento de fuego cósmico)
+ * - Pegaso Alado: pegaso_sheet.png (256x256, 4 cuadros de vuelo y galope celestial con plumas etéreas)
+ * - Unicornio Estelar: unicornio_sheet.png (341x256, 3 cuadros con crin arcoíris y cuerno dorado resplandeciente)
+ * - Fénix de Fuego: fenix_sheet.png (341x256, 6 cuadros de aleteo ardiente con estela de calor)
+ * - Cometa Estelar: cometa_sheet.png (256x256, estrella fugaz con núcleo de plasma y estela hiperluminosa)
  */
 
 class FigureManager {
@@ -13,12 +19,6 @@ class FigureManager {
     this.rotation = 0;
     this.baseY = y;
     this.sinOffset = random(100);
-
-    // Segmentos para el dragón
-    this.dragonSegments = [];
-    for (let i = 0; i < 14; i++) {
-      this.dragonSegments.push(createVector(x - i * 14, y));
-    }
   }
 
   update() {
@@ -28,45 +28,67 @@ class FigureManager {
     // Física y avance horizontal
     this.pos.add(this.vel);
 
-    // Animación de pasos / aleteo
-    if (this.timer % 4 === 0) {
-      this.frame = (this.frame + 1) % CONFIG.sprite.cols;
+    // Animación de cuadros
+    const animSpeed = (AppState.currentFigure === "dragon" || AppState.currentFigure === "fenix") ? 5 : 4;
+    if (this.timer % animSpeed === 0) {
+      this.frame++;
     }
 
-    // Comportamiento de galope / vuelo orgánico con Squash & Stretch
+    // Movimiento orgánico según la criatura
     const speedFactor = AppState.isMobile ? 0.08 : 0.1;
     const stride = sin(frameCount * speedFactor);
     const strideCos = cos(frameCount * speedFactor);
 
-    // Oscilación vertical natural (galope rítmico: sube, planea, cae suave)
-    this.pos.y = this.baseY + stride * 14 + abs(strideCos) * 6;
-    
-    // Inclinación aerodinámica según la dirección y fase del paso
-    const dir = this.vel.x > 0 ? 1 : -1;
-    this.rotation = dir * (stride * 0.06);
-
-    // Deformación elástica de galope (Squash & Stretch sutil)
-    this.scale = 1 + stride * 0.04;
-
-    // Actualización de segmentos del dragón si está activo
     if (AppState.currentFigure === "dragon") {
-      this.updateDragonBody();
-    }
+      // Vuelo majestuoso del dragón: ondulación aérea amplia y elegante
+      this.pos.y = this.baseY + sin(frameCount * 0.06 + this.sinOffset) * 20;
+      const dir = this.vel.x >= 0 ? 1 : -1;
+      this.rotation = dir * sin(frameCount * 0.06) * 0.07;
+      this.scale = 1 + sin(frameCount * 0.1) * 0.03;
 
-    // Chispas en las patas / cascos cuando toca el punto bajo del paso
-    if (stride > 0.75 && (AppState.currentFigure === "caballo" || AppState.currentFigure === "pegaso" || AppState.currentFigure === "unicornio")) {
-      const hoofX = this.pos.x + (this.vel.x > 0 ? -15 : 15);
-      const hoofY = this.pos.y + 40;
-      AppState.particles.push(new HoofSpark(hoofX, hoofY));
-    }
+      // Aliento de fuego cósmico continuo desde la boca del dragón
+      if (frameCount % (AppState.isMobile ? 3 : 2) === 0) {
+        const mouthX = this.pos.x + (this.vel.x >= 0 ? 82 : -82);
+        const mouthY = this.pos.y + 12;
+        const dirX = this.vel.x >= 0 ? 1 : -1;
+        AppState.particles.push(new DragonBreathParticle(mouthX, mouthY, dirX));
+      }
+    } else if (AppState.currentFigure === "fenix") {
+      // Vuelo del fénix: planeo y aleteo térmico
+      this.pos.y = this.baseY + sin(frameCount * 0.07 + this.sinOffset) * 18 + strideCos * 6;
+      const dir = this.vel.x >= 0 ? 1 : -1;
+      this.rotation = dir * (stride * 0.05);
+      this.scale = 1 + stride * 0.03;
 
-    // Plumas etéreas que caen con Pegaso y Fénix
-    if (frameCount % 18 === 0 && (AppState.currentFigure === "pegaso" || AppState.currentFigure === "fenix")) {
-      AppState.particles.push(new FeatherParticle(this.pos.x - dir * 20, this.pos.y));
+      if (frameCount % 12 === 0) {
+        AppState.particles.push(new FeatherParticle(this.pos.x - dir * 25, this.pos.y));
+      }
+    } else if (AppState.currentFigure === "cometa") {
+      // Trayectoria de cometa cósmico con suave estela aerodinámica
+      this.pos.y = this.baseY + sin(frameCount * 0.04 + this.sinOffset) * 14;
+      this.rotation = 0;
+      this.scale = 1 + sin(frameCount * 0.15) * 0.04;
+    } else {
+      // Galope orgánico para Caballo, Pegaso y Unicornio
+      this.pos.y = this.baseY + stride * 14 + abs(strideCos) * 6;
+      const dir = this.vel.x >= 0 ? 1 : -1;
+      this.rotation = dir * (stride * 0.06);
+      this.scale = 1 + stride * 0.04;
+
+      // Chispas en los cascos
+      if (stride > 0.75) {
+        const hoofX = this.pos.x + (this.vel.x > 0 ? -20 : 20);
+        const hoofY = this.pos.y + 40;
+        AppState.particles.push(new HoofSpark(hoofX, hoofY));
+      }
+
+      if (AppState.currentFigure === "pegaso" && frameCount % 16 === 0) {
+        AppState.particles.push(new FeatherParticle(this.pos.x - dir * 20, this.pos.y - 10));
+      }
     }
 
     // Control de límites de pantalla y ciclos
-    const fw = CONFIG.sprite.fw;
+    const fw = 180;
     if (this.pos.x > width + fw) {
       if (AppState.hideLetters) {
         this.pos.x = -fw;
@@ -89,50 +111,34 @@ class FigureManager {
     }
   }
 
-  updateDragonBody() {
-    this.dragonSegments[0] = this.pos.copy();
-    for (let i = 1; i < this.dragonSegments.length; i++) {
-      const prev = this.dragonSegments[i - 1];
-      const curr = this.dragonSegments[i];
-      const dir = p5.Vector.sub(prev, curr);
-      const dist = 13;
-      dir.setMag(dist);
-      this.dragonSegments[i] = p5.Vector.sub(prev, dir);
-      this.dragonSegments[i].y += sin(frameCount * 0.12 + i * 0.45) * 1.5;
-    }
-  }
-
-  display(spriteImage) {
+  display(sprites) {
     push();
     translate(this.pos.x, this.pos.y);
 
-    const dir = this.vel.x < 0 ? -1 : 1;
-    scale(dir * this.scale, this.scale);
-    rotate(this.rotation);
-
     const theme = AppState.currentTheme;
+    const spriteObj = (sprites && typeof sprites === "object" && !sprites.width) ? sprites : { caballo: sprites };
 
     switch (AppState.currentFigure) {
       case "caballo":
-        this.renderHorse(spriteImage, theme, false, false);
-        break;
-      case "pegaso":
-        this.renderHorse(spriteImage, theme, true, false);
-        break;
-      case "unicornio":
-        this.renderHorse(spriteImage, theme, false, true);
+        this.renderCaballo(spriteObj.caballo, theme);
         break;
       case "dragon":
-        this.renderDragon(theme);
+        this.renderDragon(spriteObj.dragon, theme);
+        break;
+      case "pegaso":
+        this.renderPegaso(spriteObj.pegaso, theme);
+        break;
+      case "unicornio":
+        this.renderUnicornio(spriteObj.unicornio, theme);
         break;
       case "fenix":
-        this.renderPhoenix(theme);
+        this.renderFenix(spriteObj.fenix, theme);
         break;
       case "cometa":
-        this.renderComet(theme);
+        this.renderCometa(spriteObj.cometa, theme);
         break;
       default:
-        this.renderHorse(spriteImage, theme, false, false);
+        this.renderCaballo(spriteObj.caballo, theme);
     }
 
     pop();
@@ -141,12 +147,17 @@ class FigureManager {
     this.emitTrailParticles(theme);
   }
 
-  renderHorse(spriteImage, theme, hasWings, hasHorn) {
-    if (!spriteImage) return;
+  renderCaballo(img, theme) {
+    if (!img) return;
+
+    push();
+    const dir = this.vel.x >= 0 ? 1 : -1;
+    scale(dir * this.scale, this.scale);
+    rotate(this.rotation);
 
     const fw = CONFIG.sprite.fw;
     const fh = CONFIG.sprite.fh;
-    const sx = this.frame * fw;
+    const sx = (this.frame % CONFIG.sprite.cols) * fw;
     const sy = 0;
 
     // Resplandor ambiental de la criatura
@@ -155,7 +166,6 @@ class FigureManager {
     fill(auraHue, 80, 100, 20 + sin(frameCount * 0.15) * 8);
     ellipse(0, 8, fw * 0.88, fh * 0.72);
 
-    // Tinte visual vibrante según el tema
     if (theme.id === "arcoiris") {
       tint((frameCount * 1.5) % 360, 65, 100);
     } else {
@@ -163,214 +173,190 @@ class FigureManager {
     }
 
     imageMode(CENTER);
-    image(spriteImage, 0, 0, fw, fh, sx, sy, fw, fh);
+    image(img, 0, 0, fw, fh, sx, sy, fw, fh);
     noTint();
 
-    // Alas de Pegaso
-    if (hasWings) {
-      this.drawPegasusWings(theme);
-    }
-
-    // Cuerno de Unicornio
-    if (hasHorn) {
-      this.drawUnicornHorn(theme);
-    }
-  }
-
-  drawPegasusWings(theme) {
-    push();
-    translate(-5, -12);
-    const flap = sin(frameCount * 0.18) * 0.55;
-    rotate(flap);
-
-    const wingHue = theme.id === "arcoiris" ? (frameCount * 2) % 360 : (theme.baseHue + 20) % 360;
-
-    // Ala primaria translúcida
-    noStroke();
-    fill(wingHue, 60, 100, 65);
-    beginShape();
-    vertex(0, 0);
-    bezierVertex(-25, -55, 35, -75, 45, -35);
-    bezierVertex(35, -20, 20, -5, 0, 0);
-    endShape(CLOSE);
-
-    // Plumas brillantes
-    fill(0, 0, 100, 80);
-    beginShape();
-    vertex(5, -5);
-    bezierVertex(-15, -45, 25, -60, 35, -30);
-    bezierVertex(25, -15, 15, -5, 5, -5);
-    endShape(CLOSE);
-
-    // Borde de luz
-    stroke(wingHue, 90, 100, 85);
-    strokeWeight(1.8);
-    noFill();
-    bezier(0, 0, -20, -50, 30, -70, 42, -32);
     pop();
   }
 
-  drawUnicornHorn(theme) {
+  renderDragon(img, theme) {
+    if (!img) return;
+
     push();
-    translate(38, -28);
-    rotate(-0.4);
+    rotate(this.rotation);
+    scale(this.scale, this.scale);
 
-    const hornHue = theme.id === "arcoiris" ? (frameCount * 4) % 360 : 45; // Oro o arcoíris
+    const isMovingLeft = this.vel.x < 0;
+    const fw = 191;
+    const fh = 161;
+    const frameIdx = this.frame % 3;
+    const sx = frameIdx * fw;
+    
+    // NATIVAMENTE EN dragon_sheet.png:
+    // Row 1 (sy = 161): Vuelo hacia el Este (derecha)
+    // Row 3 (sy = 483): Vuelo hacia el Oeste (izquierda)
+    const sy = isMovingLeft ? 483 : 161;
 
-    // Haz de luz estelar saliendo del cuerno
+    // Resplandor cósmico del dragón
     noStroke();
-    fill(hornHue, 70, 100, 35 + sin(frameCount * 0.2) * 20);
-    ellipse(18, 0, 40, 10);
+    let dragonHue = theme.id === "arcoiris" ? (frameCount * 2) % 360 : theme.baseHue;
+    fill(dragonHue, 85, 100, 24 + sin(frameCount * 0.15) * 10);
+    ellipse(0, 5, 185, 130);
 
-    // Cuerno espiral dorado
-    stroke(hornHue, 80, 100, 95);
-    strokeWeight(1);
-    fill(hornHue, 50, 100, 90);
-    triangle(0, -4, 0, 4, 24, 0);
+    // Tinte visual vibrante según el tema
+    if (theme.id === "arcoiris") {
+      tint((frameCount * 1.5) % 360, 75, 100);
+    } else {
+      tint(theme.baseHue, 70, 100);
+    }
 
-    // Destello de estrella en la punta
+    imageMode(CENTER);
+    image(img, 0, 0, 195, 164, sx, sy, fw, fh);
+    noTint();
+
+    pop();
+  }
+
+  renderPegaso(img, theme) {
+    if (!img) return;
+
+    push();
+    const dir = this.vel.x >= 0 ? 1 : -1;
+    scale(dir * this.scale, this.scale);
+    rotate(this.rotation);
+
+    const fw = 256;
+    const fh = 256;
+    const sx = (this.frame % 4) * fw;
+    const sy = 0; // Row 0
+
+    // Resplandor celestial etéreo
+    noStroke();
+    let pegasusHue = theme.id === "arcoiris" ? (frameCount * 2) % 360 : (theme.baseHue + 20) % 360;
+    fill(pegasusHue, 50, 100, 25 + sin(frameCount * 0.18) * 10);
+    ellipse(0, 0, 175, 175);
+
+    if (theme.id === "arcoiris") {
+      tint((frameCount * 1.5) % 360, 60, 100);
+    } else {
+      tint(theme.baseHue, 45, 100);
+    }
+
+    imageMode(CENTER);
+    image(img, 0, 0, 185, 185, sx, sy, fw, fh);
+    noTint();
+
+    pop();
+  }
+
+  renderUnicornio(img, theme) {
+    if (!img) return;
+
+    push();
+    const dir = this.vel.x >= 0 ? 1 : -1;
+    scale(dir * this.scale, this.scale);
+    rotate(this.rotation);
+
+    const fw = 1024 / 3; // 341.33 px
+    const fh = 256;
+    const sx = (this.frame % 3) * fw;
+    const sy = 256; // Row 1 (galope fluido con crin arcoíris y cuerno)
+
+    // Halo mágico resplandeciente
+    noStroke();
+    let unicornHue = theme.id === "arcoiris" ? (frameCount * 3) % 360 : 55;
+    fill(unicornHue, 60, 100, 24 + sin(frameCount * 0.2) * 10);
+    ellipse(0, 0, 185, 140);
+
+    // Destello de estrella en el cuerno
+    fill(0, 0, 100, 90 + sin(frameCount * 0.3) * 10);
+    drawStarShape(42, -32, 2.5, 7, 4);
+
+    if (theme.id === "arcoiris") {
+      tint((frameCount * 1.5) % 360, 65, 100);
+    } else {
+      tint(theme.baseHue, 50, 100);
+    }
+
+    imageMode(CENTER);
+    image(img, 0, 0, 195, 146, sx, sy, fw, fh);
+    noTint();
+
+    pop();
+  }
+
+  renderFenix(img, theme) {
+    if (!img) return;
+
+    push();
+    const dir = this.vel.x >= 0 ? 1 : -1;
+    scale(dir * this.scale, this.scale);
+    rotate(this.rotation);
+
+    const fw = 1024 / 3;
+    const fh = 256;
+    const f = this.frame % 6;
+    const col = f % 3;
+    const row = Math.floor(f / 3);
+    const sx = col * fw;
+    const sy = row * fh;
+
+    // Resplandor solar ardiente
+    noStroke();
+    let fenixHue = theme.id === "arcoiris" ? (frameCount * 2) % 360 : 25;
+    fill(fenixHue, 90, 100, 30 + sin(frameCount * 0.2) * 12);
+    ellipse(0, 0, 180, 135);
+
+    if (theme.id === "arcoiris") {
+      tint((frameCount * 1.5) % 360, 80, 100);
+    } else {
+      tint(theme.baseHue, 75, 100);
+    }
+
+    imageMode(CENTER);
+    image(img, 0, 0, 185, 139, sx, sy, fw, fh);
+    noTint();
+
+    pop();
+  }
+
+  renderCometa(img, theme) {
+    if (!img) return;
+
+    push();
+    // En cometa_sheet.png la cabeza apunta a la derecha y la cola a la izquierda
+    const dir = this.vel.x >= 0 ? 1 : -1;
+    scale(dir * this.scale, this.scale);
+    rotate(this.rotation);
+
+    const fw = 256;
+    const fh = 256;
+    const f = 1 + (this.frame % 7);
+    const col = f % 4;
+    const row = Math.floor(f / 4);
+    const sx = col * fw;
+    const sy = row * fh;
+
+    // Resplandor de plasma estelar
+    noStroke();
+    let cometHue = theme.id === "arcoiris" ? (frameCount * 3) % 360 : theme.baseHue;
+    fill(cometHue, 75, 100, 32 + sin(frameCount * 0.2) * 14);
+    ellipse(0, 0, 200, 100);
+
+    // Destello de diamante en el núcleo
     fill(0, 0, 100, 95);
-    drawStarShape(24, 0, 2, 6, 4);
-    pop();
-  }
+    drawStarShape(35, 0, 3, 10, 4);
 
-  renderDragon(theme) {
-    const dragonHue = theme.id === "arcoiris" ? (frameCount * 1.5) % 360 : theme.baseHue;
-
-    // Dibujar cuerpo serpentino
-    noStroke();
-    for (let i = this.dragonSegments.length - 1; i >= 1; i--) {
-      const seg = this.dragonSegments[i];
-      const relX = seg.x - this.pos.x;
-      const relY = seg.y - this.pos.y;
-      const size = map(i, 0, this.dragonSegments.length - 1, 28, 8);
-      const alpha = map(i, 0, this.dragonSegments.length - 1, 95, 45);
-
-      fill((dragonHue + i * 5) % 360, 85, 100, alpha);
-      ellipse(relX, relY, size, size * 0.85);
-
-      // Cresta dorsal brillante
-      if (i % 2 === 0) {
-        fill(45, 90, 100, 90);
-        triangle(relX, relY - size * 0.5, relX - 4, relY, relX + 4, relY);
-      }
+    if (theme.id === "arcoiris") {
+      tint((frameCount * 1.5) % 360, 75, 100);
+    } else {
+      tint(theme.baseHue, 65, 100);
     }
 
-    // Cabeza del Dragón
-    fill(dragonHue, 90, 100, 95);
-    beginShape();
-    vertex(18, -4);
-    vertex(32, -10);
-    vertex(46, -2);
-    vertex(36, 12);
-    vertex(12, 10);
-    endShape(CLOSE);
+    imageMode(CENTER);
+    image(img, 0, 0, 210, 105, sx, sy, fw, fh);
+    noTint();
 
-    // Ojo brillante
-    fill(45, 100, 100, 100);
-    ellipse(30, -3, 6, 6);
-    fill(0, 0, 100, 100);
-    ellipse(31, -3, 2.5, 2.5);
-
-    // Cuernos
-    stroke((dragonHue + 40) % 360, 90, 100, 95);
-    strokeWeight(2.5);
-    noFill();
-    bezier(22, -8, 14, -26, 4, -28, -2, -32);
-
-    // Alas de dragón batiendo
-    noStroke();
-    const wingFlap = sin(frameCount * 0.16) * 0.6;
-    push();
-    translate(4, -8);
-    rotate(wingFlap);
-    fill(dragonHue, 80, 100, 75);
-    triangle(0, 0, -25, -45, 20, -55);
-    stroke(45, 90, 100, 85);
-    strokeWeight(1.5);
-    line(0, 0, -25, -45);
-    line(0, 0, 20, -55);
-    pop();
-  }
-
-  renderPhoenix(theme) {
-    const fenixHue = theme.id === "arcoiris" ? (frameCount * 2) % 360 : 25; // Tono fuego solar
-
-    // Halo solar
-    noStroke();
-    fill(fenixHue, 90, 100, 30 + sin(frameCount * 0.2) * 15);
-    ellipse(0, 0, 90, 70);
-
-    // Cola de plumas de fuego ondulante
-    for (let p = 0; p < 3; p++) {
-      const tailOffset = (p - 1) * 12;
-      const tailWave = sin(frameCount * 0.12 + p * 0.8) * 16;
-      stroke(fenixHue + p * 15, 95, 100, 75);
-      strokeWeight(3.5 - p * 0.5);
-      noFill();
-      bezier(-10, 0, -35, tailOffset + tailWave * 0.5, -65, tailOffset + tailWave, -95, tailOffset + tailWave * 1.5);
-    }
-
-    // Alas de fuego desplegadas batiendo
-    const wingFlap = sin(frameCount * 0.18) * 0.7;
-    push();
-    translate(-2, -6);
-    rotate(wingFlap);
-    noStroke();
-    fill(fenixHue, 95, 100, 85);
-    beginShape();
-    vertex(0, 0);
-    bezierVertex(-20, -60, 20, -75, 45, -45);
-    bezierVertex(30, -25, 15, -10, 0, 0);
-    endShape(CLOSE);
-    // Núcleo solar del ala
-    fill(50, 90, 100, 95);
-    beginShape();
-    vertex(2, -2);
-    bezierVertex(-10, -45, 15, -55, 30, -35);
-    bezierVertex(20, -18, 10, -6, 2, -2);
-    endShape(CLOSE);
-    pop();
-
-    // Cuerpo y pecho dorado
-    noStroke();
-    fill(45, 95, 100, 95);
-    ellipse(6, 0, 32, 22);
-
-    // Cabeza y cresta de fuego
-    fill(fenixHue, 100, 100, 95);
-    ellipse(24, -6, 16, 14);
-    triangle(28, -8, 38, -5, 28, -2); // pico
-
-    // Ojo místico
-    fill(0, 0, 100, 100);
-    ellipse(25, -7, 4, 4);
-  }
-
-  renderComet(theme) {
-    const cometHue = theme.id === "arcoiris" ? (frameCount * 3) % 360 : theme.baseHue;
-
-    // Núcleo de estrella de cristal multifacetado
-    push();
-    rotate(frameCount * 0.05);
-
-    // Resplandor expansivo
-    noStroke();
-    fill(cometHue, 70, 100, 35 + sin(frameCount * 0.2) * 15);
-    ellipse(0, 0, 75, 75);
-
-    // Anillo orbital cósmico
-    stroke((cometHue + 40) % 360, 90, 100, 80);
-    strokeWeight(2.5);
-    noFill();
-    ellipse(0, 0, 60, 18);
-
-    // Cristal central
-    noStroke();
-    fill(cometHue, 85, 100, 95);
-    drawStarShape(0, 0, 12, 28, 6);
-    fill(0, 0, 100, 95);
-    drawStarShape(0, 0, 5, 14, 6);
     pop();
   }
 
@@ -381,7 +367,7 @@ class FigureManager {
     if (frameCount % rate === 0) {
       let huePart = theme.id === "arcoiris" ? (frameCount * 1.5) % 360 : theme.baseHue;
       const part = new Particula(
-        this.pos.x + dir * 18 + random(-10, 10),
+        this.pos.x + dir * 25 + random(-10, 10),
         this.pos.y + random(-10, 20),
         false
       );

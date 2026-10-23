@@ -7,8 +7,23 @@ let caballoSprite;
 let customFont = null;
 let creature;
 
+const CreatureSprites = {
+  caballo: null,
+  dragon: null,
+  pegaso: null,
+  unicornio: null,
+  fenix: null,
+  cometa: null
+};
+
 function preload() {
-  caballoSprite = loadImage("caballito.png");
+  CreatureSprites.caballo = loadImage("caballito.png");
+  CreatureSprites.dragon = loadImage("dragon_sheet.png");
+  CreatureSprites.pegaso = loadImage("pegaso_sheet.png");
+  CreatureSprites.unicornio = loadImage("unicornio_sheet.png");
+  CreatureSprites.fenix = loadImage("fenix_sheet.png");
+  CreatureSprites.cometa = loadImage("cometa_sheet.png");
+  caballoSprite = CreatureSprites.caballo;
 
   try {
     customFont = loadFont("Montserrat-Regular.ttf", () => {}, (err) => {
@@ -157,7 +172,7 @@ function draw() {
 
   // 9. ACTUALIZAR Y DIBUJAR CRIATURA MÁGICA
   creature.update();
-  creature.display(caballoSprite);
+  creature.display(CreatureSprites);
 
   // 10. GESTIÓN DE AUDIO DE MOVIMIENTO DE LA CRIATURA
   if (creature.pos.x > -fw && creature.pos.x < width + fw && Math.abs(creature.vel.x) > 0) {

@@ -201,6 +201,36 @@ class FeatherParticle {
 }
 
 /**
+ * Partículas de aliento de fuego cósmico para el Dragón
+ */
+class DragonBreathParticle {
+  constructor(x, y, dirX) {
+    this.pos = createVector(x, y);
+    this.vel = createVector(dirX * random(2.5, 6.0), random(-1.2, 1.2));
+    this.alpha = 100;
+    this.size = random(6, 15) * (AppState.isMobile ? 0.75 : 1);
+    const theme = AppState.currentTheme;
+    this.hue = theme.id === "arcoiris" ? (frameCount * 3) % 360 : (theme.baseHue + random(-25, 25) + 360) % 360;
+  }
+
+  update() {
+    this.pos.add(this.vel);
+    this.vel.mult(0.96);
+    this.vel.y -= 0.05; // calor ascendente
+    this.alpha -= 3.2;
+    this.size *= 0.96;
+  }
+
+  display() {
+    noStroke();
+    fill(this.hue, 95, 100, this.alpha);
+    ellipse(this.pos.x, this.pos.y, this.size);
+    fill((this.hue + 35) % 360, 100, 100, this.alpha * 0.85);
+    ellipse(this.pos.x, this.pos.y, this.size * 0.5);
+  }
+}
+
+/**
  * Función auxiliar para dibujar estrellas poligonales
  */
 function drawStarShape(x, y, radius1, radius2, npoints) {
