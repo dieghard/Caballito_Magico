@@ -1,0 +1,592 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,600;0,700;0,900;1,400&family=Outfit:wght@300;400;600;700&display=swap');
+
+@font-face {
+  font-family: 'MontserratLocal';
+  src: url('../Montserrat-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+:root {
+  --primary-glow: rgba(147, 197, 253, 0.5);
+  --glass-bg: rgba(18, 24, 38, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --glass-hover: rgba(255, 255, 255, 0.25);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --accent-color: #60a5fa;
+  --radius-lg: 18px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #05070f;
+  font-family: 'Montserrat', 'MontserratLocal', sans-serif;
+  color: var(--text-main);
+}
+
+#canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+canvas {
+  display: block;
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Luna con nubes e iluminación */
+.moon-container {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  width: 160px;
+  height: 160px;
+  z-index: 15;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: 0 0 50px 15px rgba(230, 240, 255, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.4);
+  animation: moonFloat 14s infinite ease-in-out;
+  cursor: pointer;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+}
+
+.moon-container:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 65px 22px rgba(255, 255, 255, 0.85);
+}
+
+.moon-container:active {
+  transform: scale(0.96);
+}
+
+.moon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: moonGlow 6s infinite alternate ease-in-out;
+}
+
+.clouds {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  background: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogICAgPGRlZnM+CiAgICAgIDxmaWx0ZXIgaWQ9ImYxIiB4PSIwIiB5PSIwIj4KICAgICAgICA8ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC4wMSIgbnVtT2N0YXZlcz0iMyIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPgogICAgICA8L2ZpbHRlcj4KICAgIDwvZGVmcz4KICAgIDxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNmZmZmZmZhMCIgZmlsdGVyPSJ1cmwoI2YxKSIvPgo8L3N2Zz4=");
+  opacity: 0.45;
+  animation: cloudDrift 24s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes moonFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(1.5deg); }
+}
+
+@keyframes moonGlow {
+  0% { filter: brightness(0.95) drop-shadow(0 0 10px rgba(180, 210, 255, 0.4)); }
+  100% { filter: brightness(1.15) drop-shadow(0 0 25px rgba(255, 255, 255, 0.8)); }
+}
+
+@keyframes cloudDrift {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Barra Superior: Input de texto y tema activo */
+.top-bar {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.magic-input {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
+  color: var(--text-main);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 12px 42px 12px 18px;
+  border-radius: var(--radius-md);
+  outline: none;
+  width: 280px;
+  letter-spacing: 0.5px;
+  transition: var(--transition);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.magic-input:focus {
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 25px var(--primary-glow);
+  width: 320px;
+}
+
+.input-icon {
+  position: absolute;
+  right: 14px;
+  font-size: 16px;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.char-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+  position: absolute;
+  bottom: -20px;
+  left: 6px;
+  font-weight: 500;
+}
+
+/* Badge de tema actual */
+.theme-badge {
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.theme-badge:hover {
+  background: var(--glass-hover);
+  transform: translateY(-2px);
+}
+
+.theme-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 10px currentColor;
+}
+
+/* Barra de Herramientas Inferior Flotante (Dock) */
+.dock-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45);
+}
+
+.dock-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-main);
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.dock-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateY(-3px) scale(1.02);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.15);
+}
+
+.dock-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.dock-btn.active {
+  background: rgba(96, 165, 250, 0.35);
+  border-color: #60a5fa;
+  box-shadow: 0 0 15px rgba(96, 165, 250, 0.4);
+}
+
+/* Panel flotante de selección de temas */
+.theme-modal {
+  position: fixed;
+  bottom: 90px;
+  right: 24px;
+  z-index: 40;
+  width: 320px;
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  display: none;
+  animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.theme-modal.visible {
+  display: block;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.modal-header h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+  transition: color 0.2s;
+}
+
+.close-modal-btn:hover {
+  color: #fff;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.theme-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.theme-card:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.theme-card.active {
+  border-color: #60a5fa;
+  background: rgba(96, 165, 250, 0.2);
+}
+
+.theme-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* Modal de Figuras Mágicas */
+.figure-modal {
+  position: fixed;
+  bottom: 90px;
+  right: 120px;
+  z-index: 40;
+  width: 360px;
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  display: none;
+  animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.figure-modal.visible {
+  display: block;
+}
+
+.figure-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.figure-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: var(--transition);
+}
+
+.figure-card:hover {
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateX(4px);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.figure-card.active {
+  border-color: var(--accent-color, #60a5fa);
+  background: rgba(96, 165, 250, 0.25);
+  box-shadow: 0 0 16px var(--primary-glow);
+}
+
+.figure-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.figure-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.figure-info strong {
+  font-size: 14px;
+  color: #fff;
+}
+
+.figure-info small {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+/* Modal de Compartir */
+.share-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  width: 90%;
+  max-width: 440px;
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  display: none;
+}
+
+.share-modal.visible {
+  display: block;
+  animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modal-description {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.share-input-group {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.share-input-group input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--glass-border);
+  color: var(--text-main);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: monospace;
+}
+
+.copy-btn {
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.copy-btn:hover {
+  background: #2563eb;
+}
+
+/* Powered by Diego Markiewicz */
+.powered-by {
+  position: fixed;
+  bottom: 18px;
+  left: 20px;
+  font-family: 'Montserrat', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  z-index: 10;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.powered-by:hover {
+  color: #ffffff;
+  transform: scale(1.04);
+  text-shadow: 0 0 16px rgba(96, 165, 250, 0.9);
+}
+
+/* Toast de notificación */
+.toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-60px);
+  background: rgba(15, 23, 42, 0.85);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .top-bar {
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .magic-input {
+    width: 100%;
+    font-size: 15px;
+    padding: 10px 38px 10px 14px;
+  }
+
+  .magic-input:focus {
+    width: 100%;
+  }
+
+  .moon-container {
+    top: 105px;
+    right: 16px;
+    width: 110px;
+    height: 110px;
+  }
+
+  .dock-container {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+    justify-content: space-around;
+    padding: 6px 8px;
+  }
+
+  .dock-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .theme-modal {
+    right: 16px;
+    left: 16px;
+    width: auto;
+    bottom: 80px;
+  }
+
+  .powered-by {
+    bottom: 74px;
+    left: 16px;
+    font-size: 11px;
+  }
+}
+
+/* Foldables / Samsung Flip */
+@media (max-width: 420px) {
+  .dock-btn span.label {
+    display: none;
+  }
+  .dock-btn {
+    padding: 10px 14px;
+    font-size: 16px;
+  }
+}
