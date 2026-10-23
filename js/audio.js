@@ -192,6 +192,11 @@ const AudioManager = {
         this.startCometFlightSynth();
         break;
 
+      case "trex":
+        // T-Rex: Pisadas titánicas y rugido prehistórico de baja frecuencia (SIN cascos)
+        this.startTrexSound();
+        break;
+
       default:
         this.startHorseGallop(0.35);
     }
@@ -444,6 +449,94 @@ const AudioManager = {
       const t = setInterval(pulseCometDust, 700);
       this.synthState.timers.push(t);
     } catch (e) {}
+  },
+
+  startTrexSound() {
+    const ctx = typeof getAudioContext === "function" ? getAudioContext() : null;
+    if (!ctx) return;
+    this.synthState.active = true;
+
+    // 1. Pisadas titánicas periódicas cada 500ms
+    const pulseTrexStep = () => {
+      if (!this.synthState.active || !this.enabled) return;
+      try {
+        const now = ctx.currentTime;
+
+        // Sub-bajo contundente (impacto de pata pesada)
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(80, now);
+        osc.frequency.exponentialRampToValueAtTime(32, now + 0.32);
+
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(140, now);
+
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.32, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.42);
+
+        // Crujido / temblor de tierra
+        this.playWindBurst(ctx, now, 0.28, 220, 0.16);
+      } catch (e) {}
+    };
+
+    pulseTrexStep();
+    const stepTimer = setInterval(pulseTrexStep, 500);
+    this.synthState.timers.push(stepTimer);
+
+    // 2. Rugido gutural jurásico periódico cada 3.2 segundos
+    const pulseRoar = () => {
+      if (!this.synthState.active || !this.enabled) return;
+      try {
+        const now = ctx.currentTime;
+        const roarOsc = ctx.createOscillator();
+        const roarLFO = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        const roarGain = ctx.createGain();
+        const roarFilter = ctx.createBiquadFilter();
+
+        roarOsc.type = "sawtooth";
+        roarOsc.frequency.setValueAtTime(68, now);
+        roarOsc.frequency.exponentialRampToValueAtTime(45, now + 1.2);
+
+        // LFO para textura gutural vibrante (18Hz)
+        roarLFO.type = "sine";
+        roarLFO.frequency.setValueAtTime(18, now);
+        lfoGain.gain.setValueAtTime(25, now);
+        roarLFO.connect(lfoGain);
+        lfoGain.connect(roarOsc.frequency);
+
+        roarFilter.type = "lowpass";
+        roarFilter.frequency.setValueAtTime(350, now);
+        roarFilter.frequency.exponentialRampToValueAtTime(120, now + 1.2);
+
+        roarGain.gain.setValueAtTime(0.001, now);
+        roarGain.gain.linearRampToValueAtTime(0.18, now + 0.3);
+        roarGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.3);
+
+        roarOsc.connect(roarFilter);
+        roarFilter.connect(roarGain);
+        roarGain.connect(ctx.destination);
+
+        roarOsc.start(now);
+        roarLFO.start(now);
+        roarOsc.stop(now + 1.35);
+        roarLFO.stop(now + 1.35);
+      } catch (e) {}
+    };
+
+    const roarTimer = setInterval(pulseRoar, 3200);
+    this.synthState.timers.push(roarTimer);
   },
 
   playWindBurst(ctx, now, duration, freq, vol) {

@@ -13,7 +13,8 @@ const CreatureSprites = {
   pegaso: null,
   unicornio: null,
   fenix: null,
-  cometa: null
+  cometa: null,
+  trex: null
 };
 
 function preload() {
@@ -23,6 +24,7 @@ function preload() {
   CreatureSprites.unicornio = loadImage("unicornio_sheet.png");
   CreatureSprites.fenix = loadImage("fenix_sheet.png");
   CreatureSprites.cometa = loadImage("cometa_sheet.png");
+  CreatureSprites.trex = loadImage("trex_sheet.png");
   caballoSprite = CreatureSprites.caballo;
 
   try {

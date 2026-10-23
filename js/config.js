@@ -158,6 +158,12 @@ const CONFIG = {
       name: "Cometa Estelar",
       icon: "⭐",
       desc: "Estrella fugaz de cristal con estela hiperluminosa"
+    },
+    {
+      id: "trex",
+      name: "Tiranosaurio Rex",
+      icon: "🦖",
+      desc: "El rey de los dinosaurios con pisadas titánicas y rugido prehistórico"
     }
   ]
 };

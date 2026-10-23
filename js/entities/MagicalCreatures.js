@@ -68,6 +68,19 @@ class FigureManager {
       this.pos.y = this.baseY + sin(frameCount * 0.04 + this.sinOffset) * 14;
       this.rotation = 0;
       this.scale = 1 + sin(frameCount * 0.15) * 0.04;
+    } else if (AppState.currentFigure === "trex") {
+      // Carrera y pisadas titánicas del T-Rex
+      this.pos.y = this.baseY + stride * 10 + abs(strideCos) * 5;
+      const dir = this.vel.x >= 0 ? 1 : -1;
+      this.rotation = dir * (stride * 0.05);
+      this.scale = 1 + stride * 0.03;
+
+      // Huellas y chispas de tierra al impactar las pisadas
+      if (stride > 0.72) {
+        const footX = this.pos.x + (this.vel.x > 0 ? -15 : 15);
+        const footY = this.pos.y + 45;
+        AppState.particles.push(new HoofSpark(footX, footY));
+      }
     } else {
       // Galope orgánico para Caballo, Pegaso y Unicornio
       this.pos.y = this.baseY + stride * 14 + abs(strideCos) * 6;
@@ -136,6 +149,9 @@ class FigureManager {
         break;
       case "cometa":
         this.renderCometa(spriteObj.cometa, theme);
+        break;
+      case "trex":
+        this.renderTrex(spriteObj.trex, theme);
         break;
       default:
         this.renderCaballo(spriteObj.caballo, theme);
@@ -355,6 +371,41 @@ class FigureManager {
 
     imageMode(CENTER);
     image(img, 0, 0, 210, 105, sx, sy, fw, fh);
+    noTint();
+
+    pop();
+  }
+
+  renderTrex(img, theme) {
+    if (!img) return;
+
+    push();
+    const dir = this.vel.x >= 0 ? 1 : -1;
+    scale(dir * this.scale, this.scale);
+    rotate(this.rotation);
+
+    const fw = 512;
+    const fh = 512;
+    const f = this.frame % 4;
+    const col = f % 2;
+    const row = Math.floor(f / 2);
+    const sx = col * fw;
+    const sy = row * fh;
+
+    // Resplandor prehistórico según el tema
+    noStroke();
+    let trexHue = theme.id === "arcoiris" ? (frameCount * 2) % 360 : theme.baseHue;
+    fill(trexHue, 80, 100, 22 + sin(frameCount * 0.18) * 8);
+    ellipse(0, 6, 210, 160);
+
+    if (theme.id === "arcoiris") {
+      tint((frameCount * 1.5) % 360, 75, 100);
+    } else {
+      tint(theme.baseHue, 68, 100);
+    }
+
+    imageMode(CENTER);
+    image(img, 0, 0, 220, 220, sx, sy, fw, fh);
     noTint();
 
     pop();
